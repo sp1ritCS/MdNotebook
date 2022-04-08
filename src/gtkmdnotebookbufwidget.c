@@ -21,6 +21,8 @@ G_DEFINE_TYPE_WITH_PRIVATE (MdNotebookBufWidget, mdnotebook_bufwidget, GTK_TYPE_
 
 enum {
 	PROP_CHILD = 1,
+	PROP_XZOOM,
+	PROP_YZOOM,
 	N_PROPERTIES
 };
 
@@ -32,6 +34,12 @@ static void mdnotebook_bufwidget_get_property(GObject* object, guint prop_id, GV
 	switch (prop_id) {
 		case PROP_CHILD:
 			g_value_set_object(value, mdnotebook_bufwidget_get_child(self));
+			break;
+		case PROP_XZOOM:
+			g_value_set_double(value, mdnotebook_bufwidget_get_zoom(self, MDNOTEBOOK_AXIS_X));
+			break;
+		case PROP_YZOOM:
+			g_value_set_double(value, mdnotebook_bufwidget_get_zoom(self, MDNOTEBOOK_AXIS_Y));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -45,6 +53,12 @@ static void mdnotebook_bufwidget_set_property(GObject* object, guint prop_id, co
 	switch (prop_id) {
 		case PROP_CHILD:
 			mdnotebook_bufwidget_set_child(self, g_value_get_object(value));
+			break;
+		case PROP_XZOOM:
+			mdnotebook_bufwidget_set_zoom(self, MDNOTEBOOK_AXIS_X, g_value_get_double(value));
+			break;
+		case PROP_YZOOM:
+			mdnotebook_bufwidget_set_zoom(self, MDNOTEBOOK_AXIS_Y, g_value_get_double(value));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -160,7 +174,6 @@ static void mdnotebook_bufwidget_handle_drag_mov(GtkGestureDrag* event, gdouble 
 		gtk_widget_queue_draw(GTK_WIDGET(self));
 		gtk_gesture_set_state(GTK_GESTURE(event), GTK_EVENT_SEQUENCE_CLAIMED);
 	}
-	printf("drag mov\n");
 }
 static void mdnotebook_bufwidget_handle_drag_end(GtkGestureDrag* event, gdouble xoff, gdouble yoff, MdNotebookBufWidget* self) {
 	MdNotebookBufWidgetPrivate* priv;
@@ -176,15 +189,11 @@ static void mdnotebook_bufwidget_handle_drag_end(GtkGestureDrag* event, gdouble 
 			nwidth = width + xoff,
 			nheight = height + yoff;
 
-		priv->xzoom = fabs(nwidth / (width / priv->xzoom));
-		priv->yzoom = fabs(nheight / (height / priv->yzoom));
-
-		gtk_widget_queue_resize(GTK_WIDGET(self));
+		mdnotebook_bufwidget_set_zoom(self, MDNOTEBOOK_AXIS_X, fabs(nwidth / (width / priv->xzoom)));
+		mdnotebook_bufwidget_set_zoom(self, MDNOTEBOOK_AXIS_Y, fabs(nheight / (height / priv->yzoom)));
 
 		priv->drag = MDNOTEBOOK_BUFWIDGET_CORNER_NONE;
 	}
-
-	printf("drag end\n");
 }
 
 void mdnotebook_draw_selection_handle(cairo_t* ctx, double x, double y) {
@@ -231,8 +240,8 @@ static void mdnotebook_bufwidget_snapshot(GtkWidget* widget, GtkSnapshot* snapsh
 	// Begin CAIRO selection border
 	cairo_set_line_width(ctx, 2.0);
 	cairo_set_source_rgba(ctx, .627,.659,.75,1);
-	double dashes[2] = {2., 2.};
-	cairo_set_dash(ctx, &dashes, 2, 0.);
+	const double dashes[1] = {2.};
+	cairo_set_dash(ctx, dashes, 1, 0.);
 	
 	cairo_rectangle(ctx, SELECTION_HANDLE_LEN / 2, SELECTION_HANDLE_LEN / 2, width - SELECTION_HANDLE_LEN, height - SELECTION_HANDLE_LEN);
 	cairo_stroke(ctx);
@@ -261,9 +270,9 @@ static void mdnotebook_bufwidget_class_init(MdNotebookBufWidgetClass* class) {
 	widget_class->snapshot = mdnotebook_bufwidget_snapshot;
 
 	obj_properties[PROP_CHILD] = g_param_spec_object("child", "Child", "The child widget", GTK_TYPE_WIDGET, G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY);
+	obj_properties[PROP_XZOOM] = g_param_spec_double("xzoom", "X Zoom", "Zoomfactor in X-axis Direction (Width)", 0., G_MAXFLOAT, 1., G_PARAM_READWRITE);
+	obj_properties[PROP_YZOOM] = g_param_spec_double("yzoom", "Y Zoom", "Zoomfactor in Y-axis Direction (Height)", 0., G_MAXFLOAT, 1., G_PARAM_READWRITE);
 	g_object_class_install_properties(object_class, N_PROPERTIES, obj_properties);
-
-	//gtk_widget_class_set_layout_manager_type(widget_class, GTK_TYPE_BIN_LAYOUT);
 }
 
 static void mdnotebook_bufwidget_init(MdNotebookBufWidget* self) {
@@ -321,4 +330,43 @@ void mdnotebook_bufwidget_set_child(MdNotebookBufWidget* self, GtkWidget* child)
 		gtk_widget_set_parent(priv->child, GTK_WIDGET(self));
 
 	g_object_notify_by_pspec(G_OBJECT(self), obj_properties[PROP_CHILD]);
+}
+
+gdouble mdnotebook_bufwidget_get_zoom(MdNotebookBufWidget* self, MdNotebookAxis axis) {
+	MdNotebookBufWidgetPrivate* priv;
+
+	g_return_val_if_fail(MDNOTEBOOK_IS_BUFWIDGET(self), 1.);
+
+	priv = mdnotebook_bufwidget_get_instance_private(self);
+
+	switch (axis) {
+	case MDNOTEBOOK_AXIS_X:
+		return priv->xzoom;
+	case MDNOTEBOOK_AXIS_Y:
+		return priv->yzoom;
+	default:
+		g_critical("mdnotebook_bufwidget_get_zoom received axis out of bounds");
+		return 1.;
+	}
+}
+
+void mdnotebook_bufwidget_set_zoom(MdNotebookBufWidget* self, MdNotebookAxis axis, gdouble zoom) {
+	MdNotebookBufWidgetPrivate* priv;
+
+	g_return_if_fail(MDNOTEBOOK_IS_BUFWIDGET(self));
+
+	priv = mdnotebook_bufwidget_get_instance_private(self);
+
+	switch (axis) {
+	case MDNOTEBOOK_AXIS_X:
+		priv->xzoom = zoom;
+		break;
+	case MDNOTEBOOK_AXIS_Y:
+		priv->yzoom = zoom;
+		break;
+	default:
+		g_critical("mdnotebook_bufwidget_set_zoom received axis out of bounds");
+	}
+
+	gtk_widget_queue_resize(GTK_WIDGET(self));
 }

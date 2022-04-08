@@ -3,7 +3,6 @@
 
 typedef struct {
 	GtkWidget* child;
-	GtkGestureClick* child_click_gesture;
 	gdouble zoom;
 } MdNotebookZoomViewPrivate;
 
@@ -25,7 +24,7 @@ static void mdnotebook_zoomview_get_property(GObject* object, guint prop_id, GVa
 			g_value_set_object(value, mdnotebook_zoomview_get_textview(self));
 			break;
 		case PROP_ZOOM:
-			g_value_set_float(value, mdnotebook_zoomview_get_zoom(self));
+			g_value_set_double(value, mdnotebook_zoomview_get_zoom(self));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -40,7 +39,7 @@ static void mdnotebook_zoomview_set_property(GObject* object, guint prop_id, con
 			mdnotebook_zoomview_set_textview(self, g_value_get_object(value));
 			break;
 		case PROP_ZOOM:
-			mdnotebook_zoomview_set_zoom(self, g_value_get_float(value));
+			mdnotebook_zoomview_set_zoom(self, g_value_get_double(value));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -63,8 +62,6 @@ static void mdnotebook_zoomview_measure(GtkWidget* widget, GtkOrientation orient
 
 	*min *= priv->zoom;
 	*nat *= priv->zoom;
-
-	printf("Min: %d, Nat: %d\n", *min, *nat);
 }
 
 static void mdnotebook_zoomview_size_allocate(GtkWidget* widget, gint width, gint height, gint baseline) {
@@ -97,14 +94,13 @@ static void mdnotebook_zoomview_class_init(MdNotebookZoomViewClass* class) {
 	widget_class->snapshot = mdnotebook_zoomview_snapshot;
 
 	obj_properties[PROP_CHILD] = g_param_spec_object("child", "Child", "The child widget", GTK_TYPE_TEXT_VIEW, G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY);
-	obj_properties[PROP_ZOOM] = g_param_spec_float("zoom", "Zoom", "Zoomfactor of the Textview", 0., G_MAXFLOAT, 1., G_PARAM_READWRITE | G_PARAM_CONSTRUCT);
+	obj_properties[PROP_ZOOM] = g_param_spec_double("zoom", "Zoom", "Zoomfactor of the Textview", 0., G_MAXFLOAT, 1., G_PARAM_READWRITE | G_PARAM_CONSTRUCT);
 	
 	g_object_class_install_properties(object_class,  N_PROPERTIES, obj_properties);
 }
 
 static void mdnotebook_zoomview_init(MdNotebookZoomView* self) {
 	MdNotebookZoomViewPrivate* priv;
-	GtkGesture* gesture;
 
 	priv = mdnotebook_zoomview_get_instance_private(self);
 
@@ -145,7 +141,7 @@ void mdnotebook_zoomview_set_textview(MdNotebookZoomView* self, GtkTextView* vie
 	if (priv->child)
 		gtk_widget_set_parent(priv->child, GTK_WIDGET(self));
 
-	GListModel* child_controllers = gtk_widget_observe_controllers(priv->child);
+	/*GListModel* child_controllers = gtk_widget_observe_controllers(priv->child);
 	GtkGestureClick* click_gesture = NULL;
 	for (guint i = 0; i < g_list_model_get_n_items(child_controllers); i++) {
 		GtkEventController* controller = GTK_EVENT_CONTROLLER(g_list_model_get_object(child_controllers, i));
@@ -156,7 +152,7 @@ void mdnotebook_zoomview_set_textview(MdNotebookZoomView* self, GtkTextView* vie
 		}
 	}
 	g_object_unref(child_controllers);
-	priv->child_click_gesture = click_gesture;
+	priv->child_click_gesture = click_gesture;*/
 
 	g_object_notify_by_pspec(G_OBJECT(self), obj_properties[PROP_CHILD]);
 }
