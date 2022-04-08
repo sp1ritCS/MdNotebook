@@ -12,6 +12,8 @@ typedef struct {
 	GtkWidget* child;
 	gdouble xzoom;
 	gdouble yzoom;
+	gdouble xzoomoff;
+	gdouble yzoomoff;
 	MdNotebookBufWidgetCorner drag;
 } MdNotebookBufWidgetPrivate;
 
@@ -64,16 +66,16 @@ static void mdnotebook_bufwidget_measure(GtkWidget* widget, GtkOrientation orien
 	gtk_widget_measure(priv->child, orientation, for_size, minimum, natural, minimum_baseline, natural_baseline);
 
 	if (orientation == GTK_ORIENTATION_VERTICAL) {
-		*minimum *= priv->xzoom;
-		*natural *= priv->xzoom;
-		*minimum_baseline *= priv->xzoom;
-		*natural_baseline *= priv->xzoom;
-	}
-	if (orientation == GTK_ORIENTATION_HORIZONTAL) {
 		*minimum *= priv->yzoom;
 		*natural *= priv->yzoom;
 		*minimum_baseline *= priv->yzoom;
 		*natural_baseline *= priv->yzoom;
+	}
+	if (orientation == GTK_ORIENTATION_HORIZONTAL) {
+		*minimum *= priv->xzoom;
+		*natural *= priv->xzoom;
+		*minimum_baseline *= priv->xzoom;
+		*natural_baseline *= priv->xzoom;
 	}
 }
 
@@ -153,18 +155,10 @@ static void mdnotebook_bufwidget_handle_drag_mov(GtkGestureDrag* event, gdouble 
 	priv = mdnotebook_bufwidget_get_instance_private(self);
 	
 	if (priv->drag) {
-		gdouble
-			width = gtk_widget_get_allocated_width(GTK_WIDGET(self)),
-			height = gtk_widget_get_allocated_height(GTK_WIDGET(self));
-		
-		gdouble
-			nwidth = width + yoff,
-			nheight = height + xoff;
-		
-		priv->yzoom = nwidth / (width / priv->yzoom);
-		priv->xzoom = nheight / (height / priv->xzoom);
-		
-		gtk_widget_queue_resize(GTK_WIDGET(self));
+		priv->xzoomoff = xoff;
+		priv->yzoomoff = yoff;
+		gtk_widget_queue_draw(GTK_WIDGET(self));
+		gtk_gesture_set_state(GTK_GESTURE(event), GTK_EVENT_SEQUENCE_CLAIMED);
 	}
 	printf("drag mov\n");
 }
@@ -173,6 +167,23 @@ static void mdnotebook_bufwidget_handle_drag_end(GtkGestureDrag* event, gdouble 
 	g_return_if_fail(MDNOTEBOOK_IS_BUFWIDGET(self));
 	priv = mdnotebook_bufwidget_get_instance_private(self);
 	
+	if (priv->drag) {
+		gdouble
+			width = gtk_widget_get_allocated_width(GTK_WIDGET(self)),
+			height = gtk_widget_get_allocated_height(GTK_WIDGET(self));
+
+		gdouble
+			nwidth = width + xoff,
+			nheight = height + yoff;
+
+		priv->xzoom = fabs(nwidth / (width / priv->xzoom));
+		priv->yzoom = fabs(nheight / (height / priv->yzoom));
+
+		gtk_widget_queue_resize(GTK_WIDGET(self));
+
+		priv->drag = MDNOTEBOOK_BUFWIDGET_CORNER_NONE;
+	}
+
 	printf("drag end\n");
 }
 
@@ -204,6 +215,14 @@ static void mdnotebook_bufwidget_snapshot(GtkWidget* widget, GtkSnapshot* snapsh
 	gdouble
 		width = gtk_widget_get_allocated_width(widget),
 		height = gtk_widget_get_allocated_height(widget);
+
+	if (priv->drag) {
+		gdouble
+			sfx = 1 + priv->xzoomoff / width,
+			sfy = 1 + priv->yzoomoff / height;
+
+		gtk_snapshot_scale(snapshot, sfx, sfy);
+	}
 
 	cairo_t* ctx = gtk_snapshot_append_cairo(snapshot,
 		&GRAPHENE_RECT_INIT(0, 0, width, height)
@@ -253,6 +272,8 @@ static void mdnotebook_bufwidget_init(MdNotebookBufWidget* self) {
 	priv->child = NULL;
 	priv->xzoom = 2.;
 	priv->yzoom = 1.5;
+	priv->xzoomoff = 0.;
+	priv->yzoomoff = 0.;
 	priv->drag = MDNOTEBOOK_BUFWIDGET_CORNER_NONE;
 	
 	GtkEventController* pointermov = gtk_event_controller_motion_new();
