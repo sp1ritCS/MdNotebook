@@ -89,8 +89,6 @@ static void mdnotebook_bufwidget_measure(GtkWidget* widget, GtkOrientation orien
 	if (orientation == GTK_ORIENTATION_HORIZONTAL) {
 		*minimum *= priv->xzoom;
 		*natural *= priv->xzoom;
-		*minimum_baseline *= priv->xzoom;
-		*natural_baseline *= priv->xzoom;
 	}
 }
 
