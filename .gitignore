@@ -1,0 +1,5 @@
+# meson build directories
+_build/
+x86_64-suse-linux/
+# GNOME builder artifacts
+.buildconfig
