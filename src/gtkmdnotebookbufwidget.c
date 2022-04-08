@@ -1,4 +1,5 @@
 #include "gtkmdnotebookbufwidget.h"
+#include "mdnotebook_enums.h"
 
 typedef enum {
 	MDNOTEBOOK_BUFWIDGET_CORNER_NONE = 0,

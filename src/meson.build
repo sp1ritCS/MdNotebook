@@ -1,11 +1,27 @@
 src = [
-  'gtkmdnotebookview.c',
   'gtkmdnotebookbuffer.c',
   'gtkmdnotebookbufwidget.c',
+  'gtkmdnotebookview.c',
   'gtkmdnotebookzoomview.c'
 ]
 
-gtkmdnotebook_lib = library('gtkmdnotebook', src,
+headers = [
+  'gtkmdnotebook.h',
+  'gtkmdnotebookbuffer.h',
+  'gtkmdnotebookbufwidget.h',
+  'gtkmdnotebookview.h',
+  'gtkmdnotebookzoomview.h'
+]
+
+mdnotebook_enums = gnome.mkenums('mdnotebook_enums',
+  sources: headers,
+  h_template: 'mdnotebook_enums.h.in',
+  c_template: 'mdnotebook_enums.c.in',
+  symbol_prefix: 'mdnotebook',
+  install_header: true,
+)
+
+gtkmdnotebook_lib = library('gtkmdnotebook', src + mdnotebook_enums,
   dependencies: [
     dependency('glib-2.0'),
     dependency('gtk4')
@@ -18,7 +34,7 @@ gtkmdnotebook_dep = declare_dependency(
   include_directories: include_directories('.')
 )
 
-install_headers(['gtkmdnotebook.h', 'gtkmdnotebookview.h', 'gtkmdnotebookbuffer.h', 'gtkmdnotebookbufwidget.h'], subdir: 'gtkmdnotebook')
+install_headers(headers, subdir: 'gtkmdnotebook')
 
 pkgconfig = import('pkgconfig')
 pkgconfig.generate(
@@ -28,4 +44,18 @@ pkgconfig.generate(
   subdirs: 'gtkmdnotebook',
   libraries: gtkmdnotebook_lib,
   version: meson.project_version()
+)
+
+gnome.generate_gir(gtkmdnotebook_lib,
+  sources: src + headers + mdnotebook_enums,
+  namespace: 'MdNotebook',
+  nsversion: '1',
+  symbol_prefix: 'mdnotebook',
+  dependencies: [
+    dependency('glib-2.0'),
+    dependency('gtk4')
+  ],
+  includes: ['GLib-2.0', 'GObject-2.0', 'Gtk-4.0'],
+  header: 'gtkmdnotebook.h',
+  install: true
 )
