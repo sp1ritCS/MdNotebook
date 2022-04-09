@@ -3,6 +3,7 @@
 
 typedef struct {
 	GtkWidget* child;
+	gdouble oldzoom;
 	gdouble zoom;
 } MdNotebookZoomViewPrivate;
 
@@ -94,10 +95,35 @@ static void mdnotebook_zoomview_class_init(MdNotebookZoomViewClass* class) {
 	widget_class->snapshot = mdnotebook_zoomview_snapshot;
 
 	obj_properties[PROP_CHILD] = g_param_spec_object("child", "Child", "The child widget", GTK_TYPE_TEXT_VIEW, G_PARAM_READWRITE | G_PARAM_EXPLICIT_NOTIFY);
-	obj_properties[PROP_ZOOM] = g_param_spec_double("zoom", "Zoom", "Zoomfactor of the Textview", 0., G_MAXFLOAT, 1., G_PARAM_READWRITE | G_PARAM_CONSTRUCT);
+	obj_properties[PROP_ZOOM] = g_param_spec_double("zoom", "Zoom", "Zoomfactor of the Textview", 0., 25., 1., G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY);
 	
 	g_object_class_install_properties(object_class,  N_PROPERTIES, obj_properties);
 }
+
+static void mdnotebook_handle_pinchzoom(GtkGestureZoom* event, gdouble scale, MdNotebookZoomView* self) {
+	MdNotebookZoomViewPrivate* priv;
+
+	g_return_if_fail(MDNOTEBOOK_IS_ZOOMVIEW(self));
+
+	priv = mdnotebook_zoomview_get_instance_private(self);
+
+	priv->zoom = priv->oldzoom * scale;
+
+	gtk_widget_queue_resize(GTK_WIDGET(self));
+
+	g_object_notify_by_pspec(G_OBJECT(self), obj_properties[PROP_ZOOM]);
+}
+
+static void mdnotebook_handle_pinchzoom_end(GtkGestureZoom* event, GdkEventSequence* seq, MdNotebookZoomView* self) {
+	MdNotebookZoomViewPrivate* priv;
+
+	g_return_if_fail(MDNOTEBOOK_IS_ZOOMVIEW(self));
+
+	priv = mdnotebook_zoomview_get_instance_private(self);
+
+	mdnotebook_zoomview_set_zoom(self, priv->zoom);
+}
+
 
 static void mdnotebook_zoomview_init(MdNotebookZoomView* self) {
 	MdNotebookZoomViewPrivate* priv;
@@ -106,6 +132,11 @@ static void mdnotebook_zoomview_init(MdNotebookZoomView* self) {
 
 	priv->child = NULL;
 	mdnotebook_zoomview_set_textview(self, GTK_TEXT_VIEW(mdnotebook_view_new()));
+
+	GtkGesture* gestzoom = gtk_gesture_zoom_new();
+	g_signal_connect(gestzoom, "scale-changed", G_CALLBACK(mdnotebook_handle_pinchzoom), self);
+	g_signal_connect(gestzoom, "end", G_CALLBACK(mdnotebook_handle_pinchzoom_end), self);
+	gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(gestzoom));
 }
 
 GtkWidget* mdnotebook_zoomview_new(void) {
@@ -175,6 +206,9 @@ void mdnotebook_zoomview_set_zoom(MdNotebookZoomView* self, gdouble zoom) {
 	priv = mdnotebook_zoomview_get_instance_private(self);
 
 	priv->zoom = zoom;
+	priv->oldzoom = zoom;
 
 	gtk_widget_queue_resize(GTK_WIDGET(self));
+
+	g_object_notify_by_pspec(G_OBJECT(self), obj_properties[PROP_ZOOM]);
 }
