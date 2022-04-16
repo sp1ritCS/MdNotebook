@@ -2,7 +2,11 @@ src = [
   'gtkmdnotebookbuffer.c',
   'gtkmdnotebookbufwidget.c',
   'gtkmdnotebookview.c',
-  'gtkmdnotebookzoomview.c'
+  'gtkmdnotebookzoomview.c',
+  [
+    'bufitem/mdnotebookbufitem.c',
+    'bufitem/mdnotebookbufitemtitle.c'
+  ]
 ]
 
 headers = [
@@ -10,7 +14,11 @@ headers = [
   'gtkmdnotebookbuffer.h',
   'gtkmdnotebookbufwidget.h',
   'gtkmdnotebookview.h',
-  'gtkmdnotebookzoomview.h'
+  'gtkmdnotebookzoomview.h',
+  [
+    'bufitem/mdnotebookbufitem.h',
+    'bufitem/mdnotebookbufitemtitle.h'
+  ]
 ]
 
 mdnotebook_enums = gnome.mkenums('mdnotebook_enums',
