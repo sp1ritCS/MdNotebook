@@ -1,6 +1,6 @@
 #include "gtkmdnotebookbuffer.h"
 #include "bufitem/mdnotebookbufitem.h"
-#include "bufitem/mdnotebookbufitemtitle.h"
+#include "bufitem/mdnotebookbufitemheading.h"
 
 typedef struct {
 	GListStore* bufitems;
@@ -44,7 +44,7 @@ static void mdnotebook_buffer_init(MdNotebookBuffer* self) {
 
 	priv->bufitems = g_list_store_new(MDNOTEBOOK_TYPE_BUFITEM);
 	// Add basic markdown elements
-	MdNotebookBufItem* title = mdnotebook_bufitem_title_new();
+	MdNotebookBufItem* title = mdnotebook_bufitem_heading_new();
 	g_list_store_append(priv->bufitems, title);
 	g_object_unref(title);
 }

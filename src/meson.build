@@ -5,7 +5,7 @@ src = [
   'gtkmdnotebookzoomview.c',
   [
     'bufitem/mdnotebookbufitem.c',
-    'bufitem/mdnotebookbufitemtitle.c'
+    'bufitem/mdnotebookbufitemheading.c'
   ]
 ]
 
@@ -17,7 +17,7 @@ headers = [
   'gtkmdnotebookzoomview.h',
   [
     'bufitem/mdnotebookbufitem.h',
-    'bufitem/mdnotebookbufitemtitle.h'
+    'bufitem/mdnotebookbufitemheading.h'
   ]
 ]
 

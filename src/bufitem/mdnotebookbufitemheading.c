@@ -1,11 +1,11 @@
-#include "bufitem/mdnotebookbufitemtitle.h"
+#include "bufitem/mdnotebookbufitemheading.h"
 
 #define _ __attribute__((unused))
 
-static void mdnotebook_bufitem_title_bufitem_iface_init(MdNotebookBufItemInterface* iface);
+static void mdnotebook_bufitem_heading_bufitem_iface_init(MdNotebookBufItemInterface* iface);
 
-G_DEFINE_TYPE_WITH_CODE(MdNotebookBufItemTitle, mdnotebook_bufitem_title, G_TYPE_OBJECT,
-	G_IMPLEMENT_INTERFACE(MDNOTEBOOK_TYPE_BUFITEM, mdnotebook_bufitem_title_bufitem_iface_init))
+G_DEFINE_TYPE_WITH_CODE(MdNotebookBufItemHeading, mdnotebook_bufitem_heading, G_TYPE_OBJECT,
+	G_IMPLEMENT_INTERFACE(MDNOTEBOOK_TYPE_BUFITEM, mdnotebook_bufitem_heading_bufitem_iface_init))
 
 gchar valid_titletags[6][9] = {"mdtitle1", "mdtitle2", "mdtitle3", "mdtitle4", "mdtitle5", "mdtitle6"};
 static void strip_titletags(GtkTextBuffer* buf, GtkTextIter* start, GtkTextIter* end) {
@@ -22,7 +22,7 @@ static void strip_titletags(GtkTextBuffer* buf, GtkTextIter* start, GtkTextIter*
 		gtk_text_buffer_remove_tag(buf, titlecolortag, start, end);
 }
 
-static void mdnotebook_bufitem_title_bufitem_buffer_changed(_ MdNotebookBufItem* iface, GtkTextBuffer* buf, GtkTextIter start, GtkTextIter end) {
+static void mdnotebook_bufitem_heading_bufitem_buffer_changed(_ MdNotebookBufItem* iface, GtkTextBuffer* buf, GtkTextIter start, GtkTextIter end) {
 	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
 	GtkTextIter active = start;
 
@@ -96,13 +96,13 @@ skip_leveltag:
 	}
 }
 
-static void mdnotebook_bufitem_title_class_init(_ MdNotebookBufItemTitleClass* class) {}
-static void mdnotebook_bufitem_title_bufitem_iface_init(MdNotebookBufItemInterface* iface) {
-	iface->changed = mdnotebook_bufitem_title_bufitem_buffer_changed;
+static void mdnotebook_bufitem_heading_class_init(_ MdNotebookBufItemHeadingClass* class) {}
+static void mdnotebook_bufitem_heading_bufitem_iface_init(MdNotebookBufItemInterface* iface) {
+	iface->changed = mdnotebook_bufitem_heading_bufitem_buffer_changed;
 }
 
-static void mdnotebook_bufitem_title_init(_ MdNotebookBufItemTitle* self) {}
+static void mdnotebook_bufitem_heading_init(_ MdNotebookBufItemHeading* self) {}
 
-MdNotebookBufItem* mdnotebook_bufitem_title_new() {
-	return g_object_new(MDNOTEBOOK_TYPE_BUFITEM_TITLE, NULL);
+MdNotebookBufItem* mdnotebook_bufitem_heading_new() {
+	return g_object_new(MDNOTEBOOK_TYPE_BUFITEM_HEADING, NULL);
 }
