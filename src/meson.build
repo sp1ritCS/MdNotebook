@@ -1,8 +1,8 @@
 src = [
-  'gtkmdnotebookbuffer.c',
-  'gtkmdnotebookbufwidget.c',
-  'gtkmdnotebookview.c',
-  'gtkmdnotebookzoomview.c',
+  'mdnotebookbuffer.c',
+  'mdnotebookbufwidget.c',
+  'mdnotebookview.c',
+  'mdnotebookzoomview.c',
   [
     'bufitem/mdnotebookbufitem.c',
     'bufitem/mdnotebookbufitemheading.c',
@@ -11,12 +11,12 @@ src = [
 ]
 
 headers = [
-  'gtkmdnotebook.h',
-  'gtkmdnotebookbuffer.h',
-  'gtkmdnotebookbufferextra.h',
-  'gtkmdnotebookbufwidget.h',
-  'gtkmdnotebookview.h',
-  'gtkmdnotebookzoomview.h',
+  'mdnotebook.h',
+  'mdnotebookbuffer.h',
+  'mdnotebookbufferextra.h',
+  'mdnotebookbufwidget.h',
+  'mdnotebookview.h',
+  'mdnotebookzoomview.h',
   [
     'bufitem/mdnotebookbufitem.h',
     'bufitem/mdnotebookbufitemheading.h',
@@ -32,7 +32,7 @@ mdnotebook_enums = gnome.mkenums('mdnotebook_enums',
   install_header: true,
 )
 
-gtkmdnotebook_lib = library('gtkmdnotebook', src + mdnotebook_enums,
+mdnotebook_lib = library('mdnotebook', src + mdnotebook_enums,
   dependencies: [
     dependency('glib-2.0'),
     dependency('gtk4')
@@ -40,24 +40,24 @@ gtkmdnotebook_lib = library('gtkmdnotebook', src + mdnotebook_enums,
   install: true
 )
 
-gtkmdnotebook_dep = declare_dependency(
-  link_with: gtkmdnotebook_lib,
+mdnotebook_dep = declare_dependency(
+  link_with: mdnotebook_lib,
   include_directories: include_directories('.')
 )
 
-install_headers(headers, subdir: 'gtkmdnotebook')
+install_headers(headers, subdir: 'mdnotebook')
 
 pkgconfig = import('pkgconfig')
 pkgconfig.generate(
   name: 'GtkMdNotebook',
-  filebase: 'gtkmdnotebook',
+  filebase: 'mdnotebook',
   description: 'Lorem ipsum dolor sit amet',
-  subdirs: 'gtkmdnotebook',
-  libraries: gtkmdnotebook_lib,
+  subdirs: 'mdnotebook',
+  libraries: mdnotebook_lib,
   version: meson.project_version()
 )
 
-gnome.generate_gir(gtkmdnotebook_lib,
+gnome.generate_gir(mdnotebook_lib,
   sources: src + headers + mdnotebook_enums,
   namespace: 'MdNotebook',
   nsversion: '1',
@@ -67,6 +67,6 @@ gnome.generate_gir(gtkmdnotebook_lib,
     dependency('gtk4')
   ],
   includes: ['GLib-2.0', 'GObject-2.0', 'Gtk-4.0'],
-  header: 'gtkmdnotebook.h',
+  header: 'mdnotebook.h',
   install: true
 )

@@ -1,4 +1,4 @@
-#include "gtkmdnotebookview.h"
+#include "mdnotebookview.h"
 
 static GtkTextBuffer* mdnotebook_view_create_buffer(GtkTextView*) {
 	return mdnotebook_buffer_new(NULL);

@@ -5,10 +5,10 @@
 #include <bufitem/mdnotebookbufitemheading.h>
 #include <bufitem/mdnotebookbufitemtext.h>
 
-#include <gtkmdnotebookbuffer.h>
-#include <gtkmdnotebookbufferextra.h>
-#include <gtkmdnotebookbufwidget.h>
-#include <gtkmdnotebookview.h>
-#include <gtkmdnotebookzoomview.h>
+#include <mdnotebookbuffer.h>
+#include <mdnotebookbufferextra.h>
+#include <mdnotebookbufwidget.h>
+#include <mdnotebookview.h>
+#include <mdnotebookzoomview.h>
 
 #endif // __GTKMDNOTEBOOK_H__

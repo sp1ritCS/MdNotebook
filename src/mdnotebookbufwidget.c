@@ -1,4 +1,4 @@
-#include "gtkmdnotebookbufwidget.h"
+#include "mdnotebookbufwidget.h"
 #include "mdnotebook_enums.h"
 
 typedef enum {

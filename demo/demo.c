@@ -1,5 +1,5 @@
 #include <gtk/gtk.h>
-#include <gtkmdnotebook.h>
+#include <mdnotebook.h>
 
 static void activate(GtkApplication* app, gpointer) {
 	GtkWidget *window,*shell,*scroll,*view,*bufwgt,*innerwgt,*btmbar,*zoom_slider;

@@ -2,7 +2,7 @@
 #pragma once
 
 /* Include the main project header */
-#include "gtkmdnotebook.h"
+#include "mdnotebook.h"
 
 G_BEGIN_DECLS
 /*** END file-header ***/

@@ -1,7 +1,7 @@
 #ifndef __GTKMDNOTEBOOKBUFFEREXTRA_H__
 #define __GTKMDNOTEBOOKBUFFEREXTRA_H__
 
-#include "gtkmdnotebookbuffer.h"
+#include "mdnotebookbuffer.h"
 #include "bufitem/mdnotebookbufitem.h"
 
 G_BEGIN_DECLS

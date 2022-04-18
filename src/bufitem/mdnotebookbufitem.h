@@ -4,7 +4,7 @@
 #include <glib-object.h>
 #include <gtk/gtk.h>
 
-#include "gtkmdnotebookbuffer.h"
+#include "mdnotebookbuffer.h"
 
 G_BEGIN_DECLS
 

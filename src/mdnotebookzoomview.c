@@ -1,5 +1,5 @@
-#include "gtkmdnotebookzoomview.h"
-#include "gtkmdnotebookview.h"
+#include "mdnotebookzoomview.h"
+#include "mdnotebookview.h"
 
 typedef struct {
 	GtkWidget* child;

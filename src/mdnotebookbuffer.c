@@ -1,4 +1,4 @@
-#include "gtkmdnotebookbuffer.h"
+#include "mdnotebookbuffer.h"
 #include "bufitem/mdnotebookbufitem.h"
 #include "bufitem/mdnotebookbufitemheading.h"
 #include "bufitem/mdnotebookbufitemtext.h"
