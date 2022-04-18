@@ -5,19 +5,22 @@ src = [
   'gtkmdnotebookzoomview.c',
   [
     'bufitem/mdnotebookbufitem.c',
-    'bufitem/mdnotebookbufitemheading.c'
+    'bufitem/mdnotebookbufitemheading.c',
+    'bufitem/mdnotebookbufitemtext.c'
   ]
 ]
 
 headers = [
   'gtkmdnotebook.h',
   'gtkmdnotebookbuffer.h',
+  'gtkmdnotebookbufferextra.h',
   'gtkmdnotebookbufwidget.h',
   'gtkmdnotebookview.h',
   'gtkmdnotebookzoomview.h',
   [
     'bufitem/mdnotebookbufitem.h',
-    'bufitem/mdnotebookbufitemheading.h'
+    'bufitem/mdnotebookbufitemheading.h',
+    'bufitem/mdnotebookbufitemtext.h'
   ]
 ]
 

@@ -1,6 +1,7 @@
 #include "gtkmdnotebookbuffer.h"
 #include "bufitem/mdnotebookbufitem.h"
 #include "bufitem/mdnotebookbufitemheading.h"
+#include "bufitem/mdnotebookbufitemtext.h"
 
 typedef struct {
 	GListStore* bufitems;
@@ -8,18 +9,34 @@ typedef struct {
 
 G_DEFINE_TYPE_WITH_PRIVATE (MdNotebookBuffer, mdnotebook_buffer, GTK_TYPE_TEXT_BUFFER)
 
+static void mdnotebook_buffer_cursor_changed(MdNotebookBuffer* self, GParamSpec* pspec, gpointer user_data) {
+	MdNotebookBufferPrivate* priv;
+	g_return_if_fail(MDNOTEBOOK_IS_BUFFER(self));
+	priv = mdnotebook_buffer_get_instance_private(self);
+
+	GtkTextIter start,end;
+	gtk_text_buffer_get_start_iter(GTK_TEXT_BUFFER(self), &start);
+	gtk_text_buffer_get_end_iter(GTK_TEXT_BUFFER(self), &end);
+
+	guint bufitems = g_list_model_get_n_items(G_LIST_MODEL(priv->bufitems));
+	for (guint i = 0; i<bufitems; i++) {
+		MdNotebookBufItem* bufitem = MDNOTEBOOK_BUFITEM(g_list_model_get_object(G_LIST_MODEL(priv->bufitems), i));
+		mdnotebook_bufitem_cursor_changed(bufitem, self, &start, &end);
+	}
+}
+
 static void mdnotebook_buffer_changed(GtkTextBuffer* buf) {
 	MdNotebookBuffer* self = MDNOTEBOOK_BUFFER(buf);
 	MdNotebookBufferPrivate* priv = mdnotebook_buffer_get_instance_private(self);
 
-	GtkTextIter active,end;
-	gtk_text_buffer_get_start_iter(buf, &active);
+	GtkTextIter start,end;
+	gtk_text_buffer_get_start_iter(buf, &start);
 	gtk_text_buffer_get_end_iter(buf, &end);
 
 	guint bufitems = g_list_model_get_n_items(G_LIST_MODEL(priv->bufitems));
 	for (guint i = 0; i<bufitems; i++) {
 		MdNotebookBufItem* bufitem = MDNOTEBOOK_BUFITEM(g_list_model_get_object(G_LIST_MODEL(priv->bufitems), i));
-		mdnotebook_bufitem_changed(bufitem, buf, active, end);
+		mdnotebook_bufitem_buffer_changed(bufitem, MDNOTEBOOK_BUFFER(buf), &start, &end);
 	}
 }
 
@@ -42,11 +59,16 @@ static void mdnotebook_buffer_class_init(MdNotebookBufferClass* class) {
 static void mdnotebook_buffer_init(MdNotebookBuffer* self) {
 	MdNotebookBufferPrivate* priv = mdnotebook_buffer_get_instance_private(self);
 
+	g_signal_connect(self, "notify::cursor-position", G_CALLBACK(mdnotebook_buffer_cursor_changed), NULL);
+
 	priv->bufitems = g_list_store_new(MDNOTEBOOK_TYPE_BUFITEM);
 	// Add basic markdown elements
 	MdNotebookBufItem* title = mdnotebook_bufitem_heading_new();
+	MdNotebookBufItem* text = mdnotebook_bufitem_text_new();
 	g_list_store_append(priv->bufitems, title);
+	g_list_store_append(priv->bufitems, text);
 	g_object_unref(title);
+	g_object_unref(text);
 }
 
 GtkTextBuffer* mdnotebook_buffer_new(GtkTextTagTable* table) {

@@ -8,7 +8,7 @@ G_DEFINE_TYPE_WITH_CODE(MdNotebookBufItemHeading, mdnotebook_bufitem_heading, G_
 	G_IMPLEMENT_INTERFACE(MDNOTEBOOK_TYPE_BUFITEM, mdnotebook_bufitem_heading_bufitem_iface_init))
 
 gchar valid_titletags[6][9] = {"mdtitle1", "mdtitle2", "mdtitle3", "mdtitle4", "mdtitle5", "mdtitle6"};
-static void strip_titletags(GtkTextBuffer* buf, GtkTextIter* start, GtkTextIter* end) {
+static void strip_titletags(GtkTextBuffer* buf, const GtkTextIter* start, const GtkTextIter* end) {
 	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
 
 	for (size_t i = 0; i<6; i++) {
@@ -22,11 +22,12 @@ static void strip_titletags(GtkTextBuffer* buf, GtkTextIter* start, GtkTextIter*
 		gtk_text_buffer_remove_tag(buf, titlecolortag, start, end);
 }
 
-static void mdnotebook_bufitem_heading_bufitem_buffer_changed(_ MdNotebookBufItem* iface, GtkTextBuffer* buf, GtkTextIter start, GtkTextIter end) {
+static void mdnotebook_bufitem_heading_bufitem_buffer_changed(_ MdNotebookBufItem* iface, MdNotebookBuffer* self, const GtkTextIter* start, const GtkTextIter* end) {
+	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
 	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
-	GtkTextIter active = start;
+	GtkTextIter active = *start;
 
-	strip_titletags(buf, &start, &end);
+	strip_titletags(buf, start, end);
 
 	while (true) {
 		gunichar c = gtk_text_iter_get_char(&active);
@@ -98,7 +99,7 @@ skip_leveltag:
 
 static void mdnotebook_bufitem_heading_class_init(_ MdNotebookBufItemHeadingClass* class) {}
 static void mdnotebook_bufitem_heading_bufitem_iface_init(MdNotebookBufItemInterface* iface) {
-	iface->changed = mdnotebook_bufitem_heading_bufitem_buffer_changed;
+	iface->buffer_changed = mdnotebook_bufitem_heading_bufitem_buffer_changed;
 }
 
 static void mdnotebook_bufitem_heading_init(_ MdNotebookBufItemHeading* self) {}

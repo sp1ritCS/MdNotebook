@@ -4,7 +4,6 @@
 #include <glib-object.h>
 #include <gtk/gtk.h>
 
-#include "bufitem/mdnotebookbufitem.h"
 
 G_BEGIN_DECLS
 
@@ -18,8 +17,6 @@ struct _MdNotebookBufferClass {
 };
 
 GtkTextBuffer* mdnotebook_buffer_new(GtkTextTagTable* table);
-
-void mdnotebook_buffer_add_bufitem(MdNotebookBuffer* self, MdNotebookBufItem* item);
 
 G_END_DECLS
 
