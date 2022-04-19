@@ -11,12 +11,17 @@ typedef struct {
 	char* tagname;
 	guint8 trvl;
 } TextTagNode;
-TextTagNode texttag_nodes[3] = {
+#define TEXTTAG_NODES_NUM 5
+TextTagNode texttag_nodes[TEXTTAG_NODES_NUM] = {
+	// ASTERISK (*) Nodes
 	{.tagname = "mdtextitalic", .trvl = 1},
 	{.tagname = "mdtextbold", .trvl = 2},
-	{.tagname = "mdtextbolditalic", .trvl = 3}
+	{.tagname = "mdtextbolditalic", .trvl = 3},
+	// UNDERSCORE (_) Nodes
+	{.tagname = "mdtextunderline", .trvl = 2},
+	// TILDE (~) Nodes
+	{.tagname = "mdtextstrikethrough", .trvl = 2}
 };
-gsize texttag_nodes_items = 3;
 
 static void mdnotebook_bufitem_text_bufitem_cursor_changed(_ MdNotebookBufItem* iface, MdNotebookBuffer* self, const GtkTextIter* start, const GtkTextIter* end) {
 	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
@@ -42,7 +47,7 @@ static void mdnotebook_bufitem_text_bufitem_cursor_changed(_ MdNotebookBufItem* 
 	gtk_text_buffer_remove_tag(buf, showntag, start, end);
 	gtk_text_buffer_remove_tag(buf, hiddentag, start, end);
 
-	for (gsize i = 0; i < texttag_nodes_items; i++) {
+	for (gsize i = 0; i < TEXTTAG_NODES_NUM; i++) {
 		GtkTextIter beginstart, beginend, endend, active = *start;
 		GtkTextTag* tag = gtk_text_tag_table_lookup(tagtable, texttag_nodes[i].tagname);
 		if (!tag)
@@ -75,15 +80,15 @@ next_textitem:
 static void strip_texttags(GtkTextBuffer* buf, const GtkTextIter* start, const GtkTextIter* end) {
 	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
 
-	for (gsize i = 0; i<texttag_nodes_items; i++) {
+	for (gsize i = 0; i < TEXTTAG_NODES_NUM; i++) {
 		GtkTextTag* titletag = gtk_text_tag_table_lookup(tagtable, texttag_nodes[i].tagname);
 		if (titletag)
 			gtk_text_buffer_remove_tag(buf, titletag, start, end);
 	}
 }
 
-gboolean mdnotebook_bufitem_text_check_asterisk(gunichar ch, _ gpointer user_data) {
-	return ch == '*';
+gboolean mdnotebook_bufitem_text_check_char(gunichar ch, _ gpointer user_data) {
+	return ch == (gsize)user_data;
 }
 
 typedef struct {
@@ -111,9 +116,8 @@ typedef struct {
 	GtkTextTag* tag;
 	guint8 backtrvl;
 } ApplyTextNodeUserdata;
-static void apply_tag_to_node(gpointer nodeptr, gpointer tagptr) {
-	ApplyTextNodeUserdata* tag = (ApplyTextNodeUserdata*)tagptr;
-	TextNode* node = (TextNode*)nodeptr;
+#define CAST_GFUNC(f) ((GFunc) (f))
+static void apply_tag_to_node(TextNode* node, ApplyTextNodeUserdata* tag) {
 	if (!node)
 		return;
 	if (!node->completed)
@@ -131,7 +135,7 @@ static bool mdnotebook_bufitem_text_test_escaped(const GtkTextIter* ch) {
 	return gtk_text_iter_get_char(&active) == '\\';
 }
 
-static void mdnotebook_bufitem_text_bufitem_buffer_changed(_ MdNotebookBufItem* iface, MdNotebookBuffer* self, const GtkTextIter* start, const GtkTextIter* end) {
+static void mdnotebook_bufitem_text_apply_asterisk_items(MdNotebookBuffer* self, const GtkTextIter* start, const GtkTextIter* end) {
 	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
 	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
 	GtkTextIter active = *start;
@@ -156,9 +160,7 @@ static void mdnotebook_bufitem_text_bufitem_buffer_changed(_ MdNotebookBufItem* 
 	GSList* italic_nodes = g_slist_alloc(), *bold_nodes = g_slist_alloc(), *bolditalic_nodes = g_slist_alloc();
 	GSList* italic_node_active = italic_nodes, *bold_node_active = bold_nodes, *bolditalic_node_active = bolditalic_nodes;
 
-	strip_texttags(buf, start, end);
-
-	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_text_check_asterisk, NULL, end)) {
+	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_text_check_char, (gpointer)'*', end)) {
 		if (mdnotebook_bufitem_text_test_escaped(&active))
 			continue;
 
@@ -181,15 +183,98 @@ static void mdnotebook_bufitem_text_bufitem_buffer_changed(_ MdNotebookBufItem* 
 	}
 
 	ApplyTextNodeUserdata italic_ud = { .buffer = buf, .tag = italictag, .backtrvl = 1 };
-	g_slist_foreach(italic_nodes, apply_tag_to_node, &italic_ud);
+	g_slist_foreach(italic_nodes, CAST_GFUNC(apply_tag_to_node), &italic_ud);
 	ApplyTextNodeUserdata bold_ud = { .buffer = buf, .tag = boldtag, .backtrvl = 2 };
-	g_slist_foreach(bold_nodes, apply_tag_to_node, &bold_ud);
+	g_slist_foreach(bold_nodes, CAST_GFUNC(apply_tag_to_node), &bold_ud);
 	ApplyTextNodeUserdata bolditalic_ud = { .buffer = buf, .tag = bolditalictag, .backtrvl = 3 };
-	g_slist_foreach(bolditalic_nodes, apply_tag_to_node, &bolditalic_ud);
+	g_slist_foreach(bolditalic_nodes, CAST_GFUNC(apply_tag_to_node), &bolditalic_ud);
 
 	g_slist_free_full(italic_nodes, g_free);
 	g_slist_free_full(bold_nodes, g_free);
 	g_slist_free_full(bolditalic_nodes, g_free);
+}
+
+static void mdnotebook_bufitem_text_apply_underscore_items(MdNotebookBuffer* self, const GtkTextIter* start, const GtkTextIter* end) {
+	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
+	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
+	GtkTextIter active = *start;
+
+	GtkTextTag* underlinetag = gtk_text_tag_table_lookup(tagtable, "mdtextunderline");
+	if (!underlinetag)
+		underlinetag = gtk_text_buffer_create_tag(buf, "mdtextunderline",
+			"underline-set", TRUE,
+			"underline", PANGO_UNDERLINE_SINGLE,
+		NULL);
+
+	GSList* underline_nodes = g_slist_alloc();
+	GSList* underline_node_active = underline_nodes;
+
+	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_text_check_char, (gpointer)'_', end)) {
+		if (mdnotebook_bufitem_text_test_escaped(&active))
+			continue;
+
+		guint level = 0;
+		while (gtk_text_iter_get_char(&active) == '_' && level < 2) {
+			level++; gtk_text_iter_forward_char(&active);
+		}
+
+		switch (level) {
+			case 2:
+				insert_iter_at_active(&underline_node_active, &active);
+				break;
+		}
+	}
+
+	ApplyTextNodeUserdata underline_ud = { .buffer = buf, .tag = underlinetag, .backtrvl = 2 };
+	g_slist_foreach(underline_nodes, CAST_GFUNC(apply_tag_to_node), &underline_ud);
+
+	g_slist_free_full(underline_nodes, g_free);
+}
+
+static void mdnotebook_bufitem_text_apply_tilde_items(MdNotebookBuffer* self, const GtkTextIter* start, const GtkTextIter* end) {
+	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
+	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
+	GtkTextIter active = *start;
+
+	GtkTextTag* strikethroughtag = gtk_text_tag_table_lookup(tagtable, "mdtextstrikethrough");
+	if (!strikethroughtag)
+		strikethroughtag = gtk_text_buffer_create_tag(buf, "mdtextstrikethrough",
+			"strikethrough-set", TRUE,
+			"strikethrough", TRUE,
+		NULL);
+
+	GSList* strikethrough_nodes = g_slist_alloc();
+	GSList* strikethrough_node_active = strikethrough_nodes;
+
+	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_text_check_char, (gpointer)'~', end)) {
+		if (mdnotebook_bufitem_text_test_escaped(&active))
+			continue;
+
+		guint level = 0;
+		while (gtk_text_iter_get_char(&active) == '~' && level < 2) {
+			level++; gtk_text_iter_forward_char(&active);
+		}
+
+		switch (level) {
+			case 2:
+				insert_iter_at_active(&strikethrough_node_active, &active);
+				break;
+		}
+	}
+
+	ApplyTextNodeUserdata strikethrough_ud = { .buffer = buf, .tag = strikethroughtag, .backtrvl = 2 };
+	g_slist_foreach(strikethrough_nodes, CAST_GFUNC(apply_tag_to_node), &strikethrough_ud);
+
+	g_slist_free_full(strikethrough_nodes, g_free);
+}
+
+static void mdnotebook_bufitem_text_bufitem_buffer_changed(_ MdNotebookBufItem* iface, MdNotebookBuffer* self, const GtkTextIter* start, const GtkTextIter* end) {
+	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
+
+	strip_texttags(buf, start, end);
+	mdnotebook_bufitem_text_apply_asterisk_items(self, start, end);
+	mdnotebook_bufitem_text_apply_underscore_items(self, start, end);
+	mdnotebook_bufitem_text_apply_tilde_items(self, start, end);
 }
 
 static void mdnotebook_bufitem_text_class_init(_ MdNotebookBufItemTextClass* class) {}
