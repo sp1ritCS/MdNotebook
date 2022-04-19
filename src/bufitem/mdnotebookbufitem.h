@@ -17,6 +17,7 @@ struct _MdNotebookBufItemInterface {
 	void (*init) (MdNotebookBufItem* self, MdNotebookBuffer* buffer);
 	void (*cursor_changed) (MdNotebookBufItem* self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end);
 	void (*buffer_changed) (MdNotebookBufItem* self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end);
+	void (*on_insert) (MdNotebookBufItem* self, MdNotebookBuffer* buffer, const GtkTextIter* location, gchar* text, gint len);
 
 	gpointer padding[12];
 };
@@ -24,6 +25,11 @@ struct _MdNotebookBufItemInterface {
 void mdnotebook_bufitem_init(MdNotebookBufItem* self, MdNotebookBuffer* buffer);
 void mdnotebook_bufitem_cursor_changed(MdNotebookBufItem *self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end);
 void mdnotebook_bufitem_buffer_changed(MdNotebookBufItem *self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end);
+void mdnotebook_bufitem_on_insert(MdNotebookBufItem* self, MdNotebookBuffer* buffer, const GtkTextIter* location, gchar* text, gint len);
+
+
+gboolean mdnotebook_bufitem_check_char(gunichar ch, gpointer user_data);
+gboolean mdnotebook_bufitem_check_backward_whitespace(const GtkTextIter* ch);
 
 G_END_DECLS
 

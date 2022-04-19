@@ -87,9 +87,6 @@ static void strip_texttags(GtkTextBuffer* buf, const GtkTextIter* start, const G
 	}
 }
 
-gboolean mdnotebook_bufitem_text_check_char(gunichar ch, _ gpointer user_data) {
-	return ch == (gsize)user_data;
-}
 
 typedef struct {
 	GtkTextIter start;
@@ -160,13 +157,23 @@ static void mdnotebook_bufitem_text_apply_asterisk_items(MdNotebookBuffer* self,
 	GSList* italic_nodes = g_slist_alloc(), *bold_nodes = g_slist_alloc(), *bolditalic_nodes = g_slist_alloc();
 	GSList* italic_node_active = italic_nodes, *bold_node_active = bold_nodes, *bolditalic_node_active = bolditalic_nodes;
 
-	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_text_check_char, (gpointer)'*', end)) {
+	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_check_char, (gpointer)'*', end)) {
 		if (mdnotebook_bufitem_text_test_escaped(&active))
 			continue;
 
 		guint level = 0;
 		while (gtk_text_iter_get_char(&active) == '*' && level < 3) {
 			level++; gtk_text_iter_forward_char(&active);
+		}
+
+		// If node matches `^[[:space:]]*\*{1,3} ` set level back to zero, as
+		// this is used by MdNotebook.BufItemDynBlock for enumerations.
+		// TODO: allow this check to be toggled with property
+		if (level && gtk_text_iter_get_char(&active) == ' ') {
+			GtkTextIter before_tag = active;
+			gtk_text_iter_backward_chars(&before_tag, level);
+			if (mdnotebook_bufitem_check_backward_whitespace(&before_tag))
+				level = 0;
 		}
 
 		switch (level) {
@@ -209,7 +216,7 @@ static void mdnotebook_bufitem_text_apply_underscore_items(MdNotebookBuffer* sel
 	GSList* underline_nodes = g_slist_alloc();
 	GSList* underline_node_active = underline_nodes;
 
-	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_text_check_char, (gpointer)'_', end)) {
+	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_check_char, (gpointer)'_', end)) {
 		if (mdnotebook_bufitem_text_test_escaped(&active))
 			continue;
 
@@ -246,7 +253,7 @@ static void mdnotebook_bufitem_text_apply_tilde_items(MdNotebookBuffer* self, co
 	GSList* strikethrough_nodes = g_slist_alloc();
 	GSList* strikethrough_node_active = strikethrough_nodes;
 
-	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_text_check_char, (gpointer)'~', end)) {
+	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_check_char, (gpointer)'~', end)) {
 		if (mdnotebook_bufitem_text_test_escaped(&active))
 			continue;
 

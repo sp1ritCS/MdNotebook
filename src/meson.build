@@ -5,6 +5,7 @@ src = [
   'mdnotebookzoomview.c',
   [
     'bufitem/mdnotebookbufitem.c',
+    'bufitem/mdnotebookbufitemdynblock.c',
     'bufitem/mdnotebookbufitemheading.c',
     'bufitem/mdnotebookbufitemtext.c'
   ]
@@ -19,6 +20,7 @@ headers = [
   'mdnotebookzoomview.h',
   [
     'bufitem/mdnotebookbufitem.h',
+    'bufitem/mdnotebookbufitemdynblock.h',
     'bufitem/mdnotebookbufitemheading.h',
     'bufitem/mdnotebookbufitemtext.h'
   ]
