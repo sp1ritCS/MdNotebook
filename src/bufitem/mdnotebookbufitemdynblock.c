@@ -38,6 +38,8 @@ static void mdnotebook_bufitem_dynblock_bufitem_buffer_changed(_ MdNotebookBufIt
 	gtk_text_buffer_remove_tag(buf, quotelntag, start, end);
 
 	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_check_char, (gpointer)'>', end)) {
+		if (mdnotebook_bufitem_is_iter_in_private(self, &active))
+			continue;
 		if (!mdnotebook_bufitem_check_backward_whitespace(&active))
 			continue;
 
@@ -63,14 +65,15 @@ static gboolean insert_handle_fwd(gunichar c, gpointer clause) {
 	}
 }
 
-static void mdnotebook_bufitem_dynblock_bufitem_on_insert(_ MdNotebookBufItem* iface, MdNotebookBuffer* self, const GtkTextIter* location, gchar* text, gint) {
+static void mdnotebook_bufitem_dynblock_bufitem_on_insert(_ MdNotebookBufItem* iface, MdNotebookBuffer* self, GtkTextMark* location, gchar* text, gint) {
 	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
-	GtkTextIter iter = *location;
+	GtkTextIter iter;
+	gtk_text_buffer_get_iter_at_mark(buf, &iter, location);
 	if(g_strcmp0(text, "\n") == 0) {
+		if (mdnotebook_bufitem_is_iter_in_private(self, &iter)) return;
 		// TODO: implement reference to MdNotebook.View
 		//if(self->modifier_keys & GDK_SHIFT_MASK) return;
 		if(!gtk_text_iter_ends_line(&iter)) return;
-		GtkTextMark* initial = gtk_text_buffer_create_mark(buf, NULL, &iter, true);
 
 		/* extract previous line's first word and indentation preceding it */
 		GtkTextIter start = iter; gtk_text_iter_backward_line(&start);
@@ -123,9 +126,6 @@ static void mdnotebook_bufitem_dynblock_bufitem_on_insert(_ MdNotebookBufItem* i
 			sprintf(sbuf,"%*s> ",pad,"");
 			gtk_text_buffer_insert(buf, &iter, sbuf, -1);
 		}
-
-		gtk_text_buffer_get_iter_at_mark(buf, &iter, initial);
-		gtk_text_buffer_delete_mark(buf, initial);
 	}
 }
 

@@ -36,7 +36,7 @@ void mdnotebook_bufitem_buffer_changed(MdNotebookBufItem *self, MdNotebookBuffer
 	iface->buffer_changed(self, buffer, start, end);
 }
 
-void mdnotebook_bufitem_on_insert(MdNotebookBufItem* self, MdNotebookBuffer* buffer, const GtkTextIter* location, gchar* text, gint len) {
+void mdnotebook_bufitem_on_insert(MdNotebookBufItem* self, MdNotebookBuffer* buffer, GtkTextMark* location, gchar* text, gint len) {
 	MdNotebookBufItemInterface *iface;
 
 	g_return_if_fail(MDNOTEBOOK_IS_BUFITEM(self));
@@ -48,6 +48,48 @@ void mdnotebook_bufitem_on_insert(MdNotebookBufItem* self, MdNotebookBuffer* buf
 
 
 // Common functions implementors might need
+
+GtkTextTag* mdnotebook_bufitem_get_private_tag(MdNotebookBuffer* self) {
+	GtkTextBuffer* buf;
+	GtkTextTagTable* tagtable;
+	GtkTextTag* private;
+
+	g_return_val_if_fail(MDNOTEBOOK_IS_BUFFER(self), NULL);
+
+	buf = GTK_TEXT_BUFFER(self);
+	tagtable = gtk_text_buffer_get_tag_table(buf);
+
+	private = gtk_text_tag_table_lookup(tagtable, "mdprivate");
+	if (!private)
+		private = gtk_text_buffer_create_tag(buf, "mdprivate", NULL);
+
+	return private;
+}
+
+gboolean mdnotebook_bufitem_is_iter_in_private(MdNotebookBuffer* self, const GtkTextIter* it) {
+	GtkTextBuffer* buf;
+	GtkTextTagTable* tagtable;
+	GtkTextTag* private;
+
+	g_return_val_if_fail(MDNOTEBOOK_IS_BUFFER(self), FALSE);
+
+	buf = GTK_TEXT_BUFFER(self);
+	tagtable = gtk_text_buffer_get_tag_table(buf);
+
+	private = gtk_text_tag_table_lookup(tagtable, "mdprivate");
+	if (private)
+		return gtk_text_iter_has_tag(it, private);
+
+	return FALSE;
+}
+
+void mdnotebook_butitem_strip_private(MdNotebookBuffer* self, const GtkTextIter* start, const GtkTextIter* end) {
+	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(GTK_TEXT_BUFFER(self));
+
+	GtkTextTag* privatetag = gtk_text_tag_table_lookup(tagtable, "mdprivate");
+	if (privatetag)
+		gtk_text_buffer_remove_tag(GTK_TEXT_BUFFER(self), privatetag, start, end);
+}
 
 gboolean mdnotebook_bufitem_check_char(gunichar ch, gpointer user_data) {
 	return ch == (gsize)user_data;

@@ -1,5 +1,7 @@
 #include "mdnotebookbuffer.h"
+#define MDNOTEBOOK_EXPOSE_INTERNAS
 #include "bufitem/mdnotebookbufitem.h"
+#include "bufitem/mdnotebookbufitemcodeblock.h"
 #include "bufitem/mdnotebookbufitemdynblock.h"
 #include "bufitem/mdnotebookbufitemheading.h"
 #include "bufitem/mdnotebookbufitemtext.h"
@@ -36,6 +38,8 @@ static void mdnotebook_buffer_changed(GtkTextBuffer* buf) {
 	gtk_text_buffer_get_start_iter(buf, &start);
 	gtk_text_buffer_get_end_iter(buf, &end);
 
+	mdnotebook_butitem_strip_private(self, &start, &end);
+
 	guint bufitems = g_list_model_get_n_items(G_LIST_MODEL(priv->bufitems));
 	for (guint i = 0; i<bufitems; i++) {
 		MdNotebookBufItem* bufitem = MDNOTEBOOK_BUFITEM(g_list_model_get_object(G_LIST_MODEL(priv->bufitems), i));
@@ -52,11 +56,47 @@ static void mdnotebook_buffer_on_insert(MdNotebookBuffer* self, const GtkTextIte
 	gtk_text_buffer_get_start_iter(GTK_TEXT_BUFFER(self), &start);
 	gtk_text_buffer_get_end_iter(GTK_TEXT_BUFFER(self), &end);
 
+	GtkTextMark* location_mark = gtk_text_buffer_create_mark(GTK_TEXT_BUFFER(self), NULL, location, true);
 	guint bufitems = g_list_model_get_n_items(G_LIST_MODEL(priv->bufitems));
 	for (guint i = 0; i<bufitems; i++) {
 		MdNotebookBufItem* bufitem = MDNOTEBOOK_BUFITEM(g_list_model_get_object(G_LIST_MODEL(priv->bufitems), i));
-		mdnotebook_bufitem_on_insert(bufitem, self, location, text, len);
+		mdnotebook_bufitem_on_insert(bufitem, self, location_mark, text, len);
 	}
+	gtk_text_buffer_delete_mark(GTK_TEXT_BUFFER(self), location_mark);
+
+	/* --FFR--
+	 * If there is ever a signal handler on self->insert-text, that gets
+	 * called after this handler, there will be warnings (and likely crashes)
+	 * because location is invalid if one of the BufItems decieds to insert
+	 * text into the Buffer during with it's on_insert handler.
+	 *
+	 * I work arround this here by creating a Mark at `location` and passing
+	 * that Mark down to the seperate BufItems, fron which they get the
+	 * corresponding Iter seperatly. If they decide to insert something into
+	 * the Buffer, it is their reposibility to make sure to not reuse the old
+	 * iter during their execution. After that it doesn't matter, since the
+	 * next BufItem will re-query the Iter for itself.
+	 *
+	 * The issue is just, that this will not be happening for a potential
+	 * second signal handler, if any such would be connected to this
+	 * signal, as that will receive the initial `location` Iter, which is
+	 * invalid if text was inserted.
+	 * NoteKit works arround this, by "fixing up" the `location` Iter, by
+	 * simply disregarding the fact that it is `const` and thus should not be
+	 * modified and overwriting it with a new iter queried from a mark using a
+	 * similar process as described above. @blackhole89 called the Iter
+	 * "erroneously set [...] to const", which sadly isn't correct (anymore).
+	 * While one seems to get away with overwriting it, there is risk about
+	 * binary incompatabilties that lead to crashes on optimized builds if GTK,
+	 * since compilers tend to optimize code with `const` pointers for better
+	 * performance.
+	 *
+	 * But should I ever run into an issue as described at the beginning, I'll
+	 * probably just do the same as NoteKit ._. (this is likely to occur when
+	 * implementing spellcheck [I ran into this with NoteKit when implementing
+	 * a Spellchecker using gspell], however it might not, depending on how
+	 * GTK will handle GNOME/gtk#3814)
+	 */
 }
 
 
@@ -84,12 +124,15 @@ static void mdnotebook_buffer_init(MdNotebookBuffer* self) {
 
 	priv->bufitems = g_list_store_new(MDNOTEBOOK_TYPE_BUFITEM);
 	// Add basic markdown elements
+	MdNotebookBufItem* codeblock = mdnotebook_bufitem_codeblock_new();
 	MdNotebookBufItem* title = mdnotebook_bufitem_heading_new();
 	MdNotebookBufItem* dynblock = mdnotebook_bufitem_dynblock_new();
 	MdNotebookBufItem* text = mdnotebook_bufitem_text_new();
+	g_list_store_append(priv->bufitems, codeblock);
 	g_list_store_append(priv->bufitems, title);
 	g_list_store_append(priv->bufitems, dynblock);
 	g_list_store_append(priv->bufitems, text);
+	g_object_unref(codeblock);
 	g_object_unref(title);
 	g_object_unref(dynblock);
 	g_object_unref(text);

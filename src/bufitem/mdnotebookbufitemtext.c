@@ -158,6 +158,8 @@ static void mdnotebook_bufitem_text_apply_asterisk_items(MdNotebookBuffer* self,
 	GSList* italic_node_active = italic_nodes, *bold_node_active = bold_nodes, *bolditalic_node_active = bolditalic_nodes;
 
 	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_check_char, (gpointer)'*', end)) {
+		if (mdnotebook_bufitem_is_iter_in_private(self, &active))
+			continue;
 		if (mdnotebook_bufitem_text_test_escaped(&active))
 			continue;
 
@@ -217,6 +219,8 @@ static void mdnotebook_bufitem_text_apply_underscore_items(MdNotebookBuffer* sel
 	GSList* underline_node_active = underline_nodes;
 
 	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_check_char, (gpointer)'_', end)) {
+		if (mdnotebook_bufitem_is_iter_in_private(self, &active))
+			continue;
 		if (mdnotebook_bufitem_text_test_escaped(&active))
 			continue;
 
@@ -254,6 +258,8 @@ static void mdnotebook_bufitem_text_apply_tilde_items(MdNotebookBuffer* self, co
 	GSList* strikethrough_node_active = strikethrough_nodes;
 
 	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_check_char, (gpointer)'~', end)) {
+		if (mdnotebook_bufitem_is_iter_in_private(self, &active))
+			continue;
 		if (mdnotebook_bufitem_text_test_escaped(&active))
 			continue;
 

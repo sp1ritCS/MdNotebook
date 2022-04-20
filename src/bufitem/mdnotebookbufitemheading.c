@@ -27,9 +27,13 @@ static void mdnotebook_bufitem_heading_bufitem_buffer_changed(_ MdNotebookBufIte
 	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
 	GtkTextIter active = *start;
 
+	GtkTextTag* privatetag = mdnotebook_bufitem_get_private_tag(self);
+
 	strip_titletags(buf, start, end);
 
 	while (true) {
+		if (mdnotebook_bufitem_is_iter_in_private(self, &active))
+			goto skip_check;
 		gunichar c = gtk_text_iter_get_char(&active);
 		if (c == '#') {
 			GtkTextIter checker = active;
@@ -88,10 +92,13 @@ skip_titlecolortag:
 				}
 				gtk_text_buffer_apply_tag(buf, leveltag, &active, &checker);
 skip_leveltag:
-				(void)0; // nothing
+				// TODO: allow this to be toggled with a property, if tiles should
+				// be allowed to contain other widgets
+				gtk_text_buffer_apply_tag(buf, privatetag, &active, &checker);
 			}
 		}
 
+skip_check:
 		if (!gtk_text_iter_forward_line(&active))
 			break;
 	}
