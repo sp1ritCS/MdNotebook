@@ -22,7 +22,7 @@ static void activate(GtkApplication* app, gpointer) {
 	buf = MDNOTEBOOK_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(mdnotebook_zoomview_get_textview(MDNOTEBOOK_ZOOMVIEW(view)))));
 
 	gtk_text_buffer_get_start_iter(GTK_TEXT_BUFFER(buf), &iter);
-	gtk_text_buffer_insert(GTK_TEXT_BUFFER(buf), &iter, "Hello World!\n  - MdNotebook Demo", -1);
+	gtk_text_buffer_insert(GTK_TEXT_BUFFER(buf), &iter, "Hello $\\LaTeX$!\n  - MdNotebook Demo", -1);
 
 	btmbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	gtk_widget_set_halign(btmbar, GTK_ALIGN_END);

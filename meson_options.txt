@@ -1,0 +1,1 @@
+option('latex', type: 'feature', description: 'Build support for MdNotebook.BufWidgetLatex using µTeX')

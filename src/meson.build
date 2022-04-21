@@ -1,3 +1,5 @@
+conf_data = configuration_data()
+
 src = [
   'mdnotebookbuffer.c',
   'mdnotebookbufwidget.c',
@@ -24,9 +26,32 @@ headers = [
     'bufitem/mdnotebookbufitemcodeblock.h',
     'bufitem/mdnotebookbufitemdynblock.h',
     'bufitem/mdnotebookbufitemheading.h',
-    'bufitem/mdnotebookbufitemtext.h'
+    'bufitem/mdnotebookbufitemtext.h',
   ]
 ]
+
+
+microtex = dependency('microtex', version: '>=1.0.0', fallback: ['microtex', 'microtex_dep'], required: get_option('latex'))
+microtex_cairo = dependency('microtex-cairo', version: '>=1.0.0', fallback: ['microtex', 'microtex_cairo_dep'], required: get_option('latex'))
+if microtex.found() and microtex_cairo.found()
+  if add_languages('cpp', required: get_option('latex'))
+    src += [
+      'bufitem/latex/mdnotebookbufitemlatex.c',
+      'bufitem/latex/mdnotebooklatexequation.cpp'
+    ]
+    headers += [
+      'bufitem/latex/mdnotebookbufitemlatex.h',
+      'bufitem/latex/mdnotebooklatexequation.h'
+    ]
+
+    conf_data.set('MDNOTEBOOK_HAVE_LATEX', true)
+  endif
+endif
+
+headers += configure_file(input: 'mdnotebookconfig.h.in',
+  output: 'mdnotebookconfig.h',
+  configuration: conf_data
+)
 
 mdnotebook_enums = gnome.mkenums('mdnotebook_enums',
   sources: headers,
@@ -34,12 +59,14 @@ mdnotebook_enums = gnome.mkenums('mdnotebook_enums',
   c_template: 'mdnotebook_enums.c.in',
   symbol_prefix: 'mdnotebook',
   install_header: true,
+  install_dir: join_paths(include_dir, 'mdnotebook')
 )
 
 mdnotebook_lib = library('mdnotebook', src + mdnotebook_enums,
   dependencies: [
     dependency('glib-2.0'),
-    dependency('gtk4')
+    dependency('gtk4'),
+    [microtex, microtex_cairo]
   ],
   install: true
 )

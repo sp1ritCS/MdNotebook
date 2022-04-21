@@ -1,10 +1,6 @@
 #include "mdnotebookbuffer.h"
 #define MDNOTEBOOK_EXPOSE_INTERNAS
 #include "bufitem/mdnotebookbufitem.h"
-#include "bufitem/mdnotebookbufitemcodeblock.h"
-#include "bufitem/mdnotebookbufitemdynblock.h"
-#include "bufitem/mdnotebookbufitemheading.h"
-#include "bufitem/mdnotebookbufitemtext.h"
 
 #define _ __attribute__((unused))
 
@@ -18,6 +14,10 @@ static void mdnotebook_buffer_cursor_changed(MdNotebookBuffer* self, _ GParamSpe
 	MdNotebookBufferPrivate* priv;
 	g_return_if_fail(MDNOTEBOOK_IS_BUFFER(self));
 	priv = mdnotebook_buffer_get_instance_private(self);
+
+	/* selecting text is mostly frustrating if the text layout
+	 * changes due to hiding/unhiding while doing it */
+	if (gtk_text_buffer_get_has_selection(GTK_TEXT_BUFFER(self))) return;
 
 	GtkTextIter start,end;
 	gtk_text_buffer_get_start_iter(GTK_TEXT_BUFFER(self), &start);
@@ -123,19 +123,6 @@ static void mdnotebook_buffer_init(MdNotebookBuffer* self) {
 	g_signal_connect_object(self, "insert-text", G_CALLBACK(mdnotebook_buffer_on_insert), NULL, G_CONNECT_AFTER);
 
 	priv->bufitems = g_list_store_new(MDNOTEBOOK_TYPE_BUFITEM);
-	// Add basic markdown elements
-	MdNotebookBufItem* codeblock = mdnotebook_bufitem_codeblock_new();
-	MdNotebookBufItem* title = mdnotebook_bufitem_heading_new();
-	MdNotebookBufItem* dynblock = mdnotebook_bufitem_dynblock_new();
-	MdNotebookBufItem* text = mdnotebook_bufitem_text_new();
-	g_list_store_append(priv->bufitems, codeblock);
-	g_list_store_append(priv->bufitems, title);
-	g_list_store_append(priv->bufitems, dynblock);
-	g_list_store_append(priv->bufitems, text);
-	g_object_unref(codeblock);
-	g_object_unref(title);
-	g_object_unref(dynblock);
-	g_object_unref(text);
 }
 
 GtkTextBuffer* mdnotebook_buffer_new(GtkTextTagTable* table) {
@@ -148,4 +135,6 @@ void mdnotebook_buffer_add_bufitem(MdNotebookBuffer* self, MdNotebookBufItem* it
 	priv = mdnotebook_buffer_get_instance_private(self);
 
 	g_list_store_append(priv->bufitems, item);
+
+	g_object_unref(item);
 }
