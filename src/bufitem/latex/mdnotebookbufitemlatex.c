@@ -74,11 +74,15 @@ static void mdnotebook_bufitem_latex_bufitem_init(MdNotebookBufItem* iface, MdNo
 // code.
 // Once the selection was remove, it automatally disconnects itself again.
 static void mdnotebook_bufitem_latex_cursor_changed_remove_selection(GtkTextBuffer* buf, GParamSpec*, GtkTextTag* tag) {
-	GtkTextIter ins;
+	GtkTextIter ins,sb;
 	gtk_text_buffer_get_iter_at_mark(buf, &ins, gtk_text_buffer_get_insert(buf));
+	gtk_text_buffer_get_iter_at_mark(buf, &sb, gtk_text_buffer_get_selection_bound(buf));
+
+	if (gtk_text_iter_has_tag(&sb, tag))
+		goto unref;
 
 	gtk_text_buffer_move_mark(buf, gtk_text_buffer_get_selection_bound(buf), &ins);
-
+unref:
 	g_signal_handlers_disconnect_by_func(buf, (gpointer)mdnotebook_bufitem_latex_cursor_changed_remove_selection, tag);
 	g_object_unref(tag);
 }
@@ -121,9 +125,11 @@ static void mdnotebook_bufitem_latex_bufitem_cursor_changed(MdNotebookBufItem* i
 			if (!num || !MDNOTEBOOK_IS_LATEX_EQUATION(widgets[0]))
 				continue;
 
-			GtkTextIter cursor_check = active;
-			gtk_text_iter_forward_char(&cursor_check);
-			if (gtk_text_iter_in_range(&cursor, &anchor, &cursor_check)) {
+			// ensure that this also shows the equation code and since gtk_text_iter_in_range
+			// does not return true when the iter is at the end of the range, and I cannot
+			// forward iters over the end of the buffer, I have to work arround this like so.
+			gint delta = gtk_text_iter_get_offset(&cursor) - gtk_text_iter_get_offset(&active);
+			if (gtk_text_iter_in_range(&cursor, &anchor, &active) || delta == 0) {
 				gtk_widget_hide(widgets[0]);
 				gtk_text_buffer_apply_tag(buf, hiddentag, &anchor, &begin);
 			} else {
@@ -159,6 +165,10 @@ static void mdnotebook_bufitem_latex_bufitem_cursor_changed(MdNotebookBufItem* i
 			gtk_text_buffer_move_mark_by_name(buf, "selection_bound", &new_iter);
 	}
 
+	// I still don't like this; at it's current state this is very buggy
+	// and broken (cannot select from last char in equation, `<Shift>Home`
+	// doesn't work when behind an equation, etc.) Will definitively have
+	// to implement a better solution. Just don't know how yet ._.
 	if (new_valid)
 		g_signal_connect(self, "notify::has-selection", G_CALLBACK(mdnotebook_bufitem_latex_cursor_changed_remove_selection), g_object_ref(latextag));
 

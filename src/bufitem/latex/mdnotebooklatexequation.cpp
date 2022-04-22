@@ -161,6 +161,11 @@ static void mdnotebook_latex_equation_measure(GtkWidget* widget, GtkOrientation 
 		*nat = priv->microtex->getHeight() + 1;
 		*min_baseline = priv->microtex->getBaseline();
 		*nat_baseline = priv->microtex->getBaseline();
+		// when there is no rendered LaTeX, µTeX sets baseline to -F_MAX
+		if (*min_baseline == G_MININT32)
+			*min_baseline = 0;
+		if (*nat_baseline == G_MININT32)
+			*nat_baseline = 0;
 	}
 }
 static void mdnotebook_latex_equation_snapshot(GtkWidget* widget, GtkSnapshot* snapshot) {
