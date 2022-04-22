@@ -129,13 +129,21 @@ GtkTextBuffer* mdnotebook_buffer_new(GtkTextTagTable* table) {
 	return g_object_new(MDNOTEBOOK_TYPE_BUFFER, "tag-table", table, NULL);
 }
 
+static gboolean mdnotebook_buffer_cmp_bufitem_type(gconstpointer lhs, gconstpointer rhs) {
+	return G_OBJECT_TYPE(lhs) == G_OBJECT_TYPE(rhs);
+}
+
 void mdnotebook_buffer_add_bufitem(MdNotebookBuffer* self, MdNotebookBufItem* item) {
 	MdNotebookBufferPrivate* priv;
 	g_return_if_fail(MDNOTEBOOK_IS_BUFFER(self));
 	priv = mdnotebook_buffer_get_instance_private(self);
 
-	g_list_store_append(priv->bufitems, item);
-	mdnotebook_bufitem_init(item, self);
+	if (g_list_store_find_with_equal_func(priv->bufitems, item, mdnotebook_buffer_cmp_bufitem_type, NULL)) {
+		g_warning("%s is already registered in the MdNotebook.Buffer\n", g_type_name(G_OBJECT_TYPE(item)));
+	} else {
+		g_list_store_append(priv->bufitems, item);
+		mdnotebook_bufitem_init(item, self);
+	}
 
 	g_object_unref(item);
 }
