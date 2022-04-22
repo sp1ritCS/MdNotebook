@@ -468,6 +468,11 @@ void mdnotebook_latex_equation_set_color(MdNotebookLatexEquation* self, guint32 
 }
 
 void mdnotebook_latex_equation_init_microtex() {
+	if (tex::MicroTeX::isInited()) {
+		g_warning("MicroTeX already initialized\n");
+		return;
+	}
+
 	tex::InitFontSenseAuto autoinit;
 	tex::MicroTeX::init(autoinit);
 	tex::PlatformFactory::registerFactory("gtk", std::make_unique<tex::PlatformFactory_cairo>());

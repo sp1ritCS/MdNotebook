@@ -12,8 +12,8 @@ void mdnotebook_bufitem_init(MdNotebookBufItem* self, MdNotebookBuffer* buffer) 
 	g_return_if_fail(MDNOTEBOOK_IS_BUFITEM(self));
 
 	iface = MDNOTEBOOK_BUFITEM_GET_IFACE(self);
-	g_return_if_fail (iface->init != NULL);
-	iface->init(self, buffer);
+	if (iface->init != NULL)
+		iface->init(self, buffer);
 }
 
 void mdnotebook_bufitem_cursor_changed(MdNotebookBufItem *self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end) {
@@ -107,4 +107,28 @@ gboolean mdnotebook_bufitem_check_backward_whitespace(const GtkTextIter* ch) {
 	}
 
 	return TRUE;
+}
+
+gboolean mdnotebook_bufitem_get_tag_extends(const GtkTextIter* t, GtkTextTag* tag, GtkTextIter* left, GtkTextIter* right) {
+	GtkTextIter active = *t;
+	if (gtk_text_iter_starts_tag(&active, tag)) {
+		*left = active;
+		gtk_text_iter_forward_to_tag_toggle(&active, tag);
+		*right = active;
+		return TRUE;
+	}
+	if (gtk_text_iter_ends_tag(&active, tag)) {
+		*right = active;
+		gtk_text_iter_backward_to_tag_toggle(&active, tag);
+		*left = active;
+		return TRUE;
+	}
+	if (gtk_text_iter_has_tag(&active, tag)) {
+		*left = active;
+		gtk_text_iter_backward_to_tag_toggle(left, tag);
+		*right = active;
+		gtk_text_iter_forward_to_tag_toggle(right, tag);
+		return TRUE;
+	}
+	return FALSE;
 }

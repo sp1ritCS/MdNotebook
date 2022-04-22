@@ -34,6 +34,7 @@ void mdnotebook_butitem_strip_private(MdNotebookBuffer* self, const GtkTextIter*
 #endif
 gboolean mdnotebook_bufitem_check_char(gunichar ch, gpointer user_data);
 gboolean mdnotebook_bufitem_check_backward_whitespace(const GtkTextIter* ch);
+gboolean mdnotebook_bufitem_get_tag_extends(const GtkTextIter* t, GtkTextTag* tag, GtkTextIter* left, GtkTextIter* right);
 
 G_END_DECLS
 

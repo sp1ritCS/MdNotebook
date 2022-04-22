@@ -6,6 +6,7 @@ static void mdnotebook_bufitem_latex_bufitem_iface_init(MdNotebookBufItemInterfa
 
 typedef struct {
 	MdNotebookView* view;
+	GtkTextMark* last_position;
 } MdNotebookBufItemLatexPrivate;
 
 G_DEFINE_TYPE_WITH_CODE(MdNotebookBufItemLatex, mdnotebook_bufitem_latex, G_TYPE_OBJECT,
@@ -52,8 +53,36 @@ static void mdnotebook_bufitem_latex_dispose(GObject* object) {
 	G_OBJECT_CLASS(mdnotebook_bufitem_latex_parent_class)->dispose(object);
 }
 
-static void mdnotebook_bufitem_latex_bufitem_cursor_changed(_ MdNotebookBufItem* /* if used, you need update mdnotebook_bufitem_latex_queue_child_anchor_cb as this calls this method with iface set to NULL */,
-															MdNotebookBuffer* self, const GtkTextIter* start, const GtkTextIter* end) {
+static void mdnotebook_bufitem_latex_bufitem_init(MdNotebookBufItem* iface, MdNotebookBuffer* self) {
+	MdNotebookBufItemLatexPrivate* priv = mdnotebook_bufitem_latex_get_instance_private(MDNOTEBOOK_BUFITEM_LATEX(iface));
+	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
+	GtkTextIter cursor;
+	gtk_text_buffer_get_iter_at_mark(buf, &cursor, gtk_text_buffer_get_insert(buf));
+	GtkTextMark* last_pos = gtk_text_buffer_create_mark(buf, "mdlatexlast_position", &cursor, true);
+
+	priv->last_position = last_pos;
+
+	mdnotebook_latex_equation_init_microtex();
+}
+// work arround the equation code being partially selected after expanding the
+// widget, but only after the cursor_changed method has completed. This
+// function is connected to "notify::selection-changed" if the new cursor
+// position is inside the `mdlatex` tag. Once the signal fires, the following
+// will be executed, removing the selection by setting it to the insert
+// location. Unlike NoteKit, this means that the cursor position will ultimatly
+// be where the user clicked and not at the beginning or end of the equation
+// code.
+// Once the selection was remove, it automatally disconnects itself again.
+static void mdnotebook_bufitem_latex_cursor_changed_remove_selection(GtkTextBuffer* buf, GParamSpec*, GtkTextTag* tag) {
+	GtkTextIter ins;
+	gtk_text_buffer_get_iter_at_mark(buf, &ins, gtk_text_buffer_get_insert(buf));
+
+	gtk_text_buffer_move_mark(buf, gtk_text_buffer_get_selection_bound(buf), &ins);
+
+	g_signal_handlers_disconnect_by_func(buf, (gpointer)mdnotebook_bufitem_latex_cursor_changed_remove_selection, tag);
+	g_object_unref(tag);
+}
+static void mdnotebook_bufitem_latex_bufitem_cursor_changed(MdNotebookBufItem* iface, MdNotebookBuffer* self, const GtkTextIter* start, const GtkTextIter* end) {
 	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
 	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
 	GtkTextIter cursor;
@@ -92,14 +121,48 @@ static void mdnotebook_bufitem_latex_bufitem_cursor_changed(_ MdNotebookBufItem*
 			if (!num || !MDNOTEBOOK_IS_LATEX_EQUATION(widgets[0]))
 				continue;
 
-			if (gtk_text_iter_in_range(&cursor, &anchor, &active)) {
+			GtkTextIter cursor_check = active;
+			gtk_text_iter_forward_char(&cursor_check);
+			if (gtk_text_iter_in_range(&cursor, &anchor, &cursor_check)) {
 				gtk_widget_hide(widgets[0]);
+				gtk_text_buffer_apply_tag(buf, hiddentag, &anchor, &begin);
 			} else {
 				gtk_widget_show(widgets[0]);
 				gtk_text_buffer_apply_tag(buf, hiddentag, &begin, &active);
 			}
 		}
 	}
+
+	MdNotebookBufItemLatexPrivate* priv = mdnotebook_bufitem_latex_get_instance_private(MDNOTEBOOK_BUFITEM_LATEX(iface));
+	GtkTextIter old_iter,new_iter;
+	gtk_text_buffer_get_iter_at_mark(buf, &old_iter, priv->last_position);
+	gtk_text_buffer_get_iter_at_mark(buf, &new_iter, gtk_text_buffer_get_insert(buf));
+
+	GtkTextIter new_left,new_right;
+	gboolean old_has_latex = gtk_text_iter_has_tag(&old_iter, latextag) || gtk_text_iter_ends_tag(&old_iter, latextag);
+	gboolean new_valid = mdnotebook_bufitem_get_tag_extends(&new_iter, latextag, &new_left, &new_right);
+	gboolean from_right = new_valid && !old_has_latex && gtk_text_iter_compare(&old_iter, &new_iter) > 0;
+
+	if (from_right) {
+		GtkTextIter ins,sb;
+
+		// wierd workarround to the Gtk.TextBuffer moving the cursor to the wrong spot; this might be my bug intorduced above
+		gint delta = gtk_text_iter_get_offset(&new_iter) - gtk_text_iter_get_offset(&new_left);
+		gtk_text_iter_forward_to_tag_toggle(&new_iter, latextag);
+		gtk_text_iter_forward_chars(&new_iter, delta);
+
+		gtk_text_buffer_get_iter_at_mark(buf, &ins, gtk_text_buffer_get_insert(buf));
+		gtk_text_buffer_get_iter_at_mark(buf, &sb, gtk_text_buffer_get_selection_bound(buf));
+
+		gtk_text_buffer_move_mark_by_name(buf, "insert", &new_iter);
+		if (gtk_text_iter_compare(&sb, &ins) == 0)
+			gtk_text_buffer_move_mark_by_name(buf, "selection_bound", &new_iter);
+	}
+
+	if (new_valid)
+		g_signal_connect(self, "notify::has-selection", G_CALLBACK(mdnotebook_bufitem_latex_cursor_changed_remove_selection), g_object_ref(latextag));
+
+	gtk_text_buffer_move_mark(buf, priv->last_position, &cursor);
 }
 
 static bool mdnotebook_bufitem_latex_test_escaped(const GtkTextIter* ch) {
@@ -110,27 +173,40 @@ static bool mdnotebook_bufitem_latex_test_escaped(const GtkTextIter* ch) {
 	return gtk_text_iter_get_char(&active) == '\\';
 }
 
-static gboolean mdnotebook_bufitem_latex_queue_child_anchor_cb(GtkTextMark* mark) {
-	GtkTextBuffer* buf = gtk_text_mark_get_buffer(mark);
+typedef struct {
+	MdNotebookBufItemLatex* item;
+	GtkTextMark* mark;
+} QueuedChildAnchor;
+
+static gboolean mdnotebook_bufitem_latex_queue_child_anchor_cb(QueuedChildAnchor* queue) {
+	GtkTextBuffer* buf = gtk_text_mark_get_buffer(queue->mark);
 	GtkTextIter start;
-	gtk_text_buffer_get_iter_at_mark(buf, &start, mark);
+	gtk_text_buffer_get_iter_at_mark(buf, &start, queue->mark);
 
 	if (!gtk_text_iter_get_child_anchor(&start))
 		gtk_text_buffer_create_child_anchor(buf, &start);
 
-	gtk_text_buffer_delete_mark(buf, mark);
+	gtk_text_buffer_delete_mark(buf, queue->mark);
 
 	GtkTextIter bufstart,bufend;
 	gtk_text_buffer_get_start_iter(buf, &bufstart);
 	gtk_text_buffer_get_end_iter(buf, &bufend);
-	mdnotebook_bufitem_latex_bufitem_cursor_changed(NULL, MDNOTEBOOK_BUFFER(buf), &bufstart, &bufend);
+	mdnotebook_bufitem_latex_bufitem_cursor_changed(MDNOTEBOOK_BUFITEM(queue->item), MDNOTEBOOK_BUFFER(buf), &bufstart, &bufend);
+
+	g_object_unref(queue->mark);
+	g_object_unref(queue->item);
+	g_free(queue);
 
 	return G_SOURCE_REMOVE;
 }
 
-static void mdnotebook_bufitem_latex_queue_child_anchor(MdNotebookBuffer* self, GtkTextMark* mark) {
+static void mdnotebook_bufitem_latex_queue_child_anchor(MdNotebookBufItemLatex* item, GtkTextMark* mark) {
+	QueuedChildAnchor* queue = g_new(QueuedChildAnchor, 1);
+	queue->item = g_object_ref(item);
+	queue->mark = g_object_ref(mark);
+
 	GSource* s = g_idle_source_new();
-	g_source_set_callback(s, G_SOURCE_FUNC(mdnotebook_bufitem_latex_queue_child_anchor_cb), mark, NULL);
+	g_source_set_callback(s, G_SOURCE_FUNC(mdnotebook_bufitem_latex_queue_child_anchor_cb), queue, NULL);
 	g_source_attach(s, g_main_context_default());
 }
 
@@ -150,7 +226,7 @@ static gboolean mdnotebook_bufitem_latex_queue_child_removal_cb(GtkTextMark* mar
 
 	return G_SOURCE_REMOVE;
 }
-static void mdnotebook_bufitem_latex_queue_child_removal(MdNotebookBuffer* self, GtkTextMark* mark) {
+static void mdnotebook_bufitem_latex_queue_child_removal(GtkTextMark* mark) {
 	GSource* s = g_idle_source_new();
 	g_source_set_callback(s, G_SOURCE_FUNC(mdnotebook_bufitem_latex_queue_child_removal_cb), mark, NULL);
 	g_source_attach(s, g_main_context_default());
@@ -211,7 +287,7 @@ static void mdnotebook_bufitem_latex_apply_dollar_items(MdNotebookBufItemLatex* 
 			GtkTextChildAnchor* anch = gtk_text_iter_get_child_anchor(&anchor);
 			if (!anch) {
 				GtkTextMark* mark = gtk_text_buffer_create_mark(buf, NULL, &latex_begin, TRUE);
-				mdnotebook_bufitem_latex_queue_child_anchor(self, mark);
+				mdnotebook_bufitem_latex_queue_child_anchor(latex, mark);
 			} else {
 				gchar* equation = gtk_text_iter_get_text(&latex_begin, &active);
 				guint num;
@@ -250,7 +326,7 @@ static void mdnotebook_bufitem_latex_apply_dollar_items(MdNotebookBufItemLatex* 
 			continue;
 
 		GtkTextMark* mark = gtk_text_buffer_create_mark(buf, NULL, &before, TRUE);
-		mdnotebook_bufitem_latex_queue_child_removal(self, mark);
+		mdnotebook_bufitem_latex_queue_child_removal(mark);
 
 		// if there are (for whatever reason) multiple invalid nodes, the next one will be
 		// cleared once the first one has been removed (which will trigger this function again,
@@ -279,6 +355,7 @@ static void mdnotebook_bufitem_latex_class_init(MdNotebookBufItemLatexClass* cla
 	g_object_class_install_properties(object_class, N_PROPERTIES, obj_properties);
 }
 static void mdnotebook_bufitem_latex_bufitem_iface_init(MdNotebookBufItemInterface* iface) {
+	iface->init = mdnotebook_bufitem_latex_bufitem_init;
 	iface->cursor_changed = mdnotebook_bufitem_latex_bufitem_cursor_changed;
 	iface->buffer_changed = mdnotebook_bufitem_latex_bufitem_buffer_changed;
 }
@@ -287,9 +364,7 @@ static void mdnotebook_bufitem_latex_init(MdNotebookBufItemLatex* self) {
 	MdNotebookBufItemLatexPrivate* priv = mdnotebook_bufitem_latex_get_instance_private(self);
 
 	priv->view = NULL;
-
-	// TODO: move to iface init
-	mdnotebook_latex_equation_init_microtex();
+	priv->last_position = NULL;
 }
 
 MdNotebookBufItem* mdnotebook_bufitem_latex_new(MdNotebookView* textview) {

@@ -135,6 +135,7 @@ void mdnotebook_buffer_add_bufitem(MdNotebookBuffer* self, MdNotebookBufItem* it
 	priv = mdnotebook_buffer_get_instance_private(self);
 
 	g_list_store_append(priv->bufitems, item);
+	mdnotebook_bufitem_init(item, self);
 
 	g_object_unref(item);
 }
