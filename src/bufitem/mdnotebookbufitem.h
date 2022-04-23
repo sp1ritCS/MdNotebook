@@ -5,6 +5,7 @@
 #include <gtk/gtk.h>
 
 #include "mdnotebookbuffer.h"
+#include "mdnotebookview.h"
 
 G_BEGIN_DECLS
 
@@ -21,6 +22,9 @@ struct _MdNotebookBufItemClass {
 
 	gpointer padding[12];
 };
+
+MdNotebookView* mdnotebook_bufitem_get_textview(MdNotebookBufItem* self);
+void mdnotebook_bufitem_set_textview(MdNotebookBufItem* self, MdNotebookView* view);
 
 void mdnotebook_bufitem_registered(MdNotebookBufItem* self, MdNotebookBuffer* buffer);
 void mdnotebook_bufitem_cursor_changed(MdNotebookBufItem *self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end);
