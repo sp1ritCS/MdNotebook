@@ -2,48 +2,51 @@
 
 #define _ __attribute__((unused))
 
-G_DEFINE_INTERFACE (MdNotebookBufItem, mdnotebook_bufitem, G_TYPE_OBJECT)
+G_DEFINE_ABSTRACT_TYPE (MdNotebookBufItem, mdnotebook_bufitem, G_TYPE_OBJECT)
 
-static void mdnotebook_bufitem_default_init(_ MdNotebookBufItemInterface* iface) {}
+static void mdnotebook_bufitem_class_init(MdNotebookBufItemClass* class) {
+	class->registered = NULL;
+	class->cursor_changed = NULL;
+	class->buffer_changed = NULL;
+	class->on_insert = NULL;
+}
 
-void mdnotebook_bufitem_init(MdNotebookBufItem* self, MdNotebookBuffer* buffer) {
-	MdNotebookBufItemInterface *iface;
+static void mdnotebook_bufitem_init(_ MdNotebookBufItem* self) {}
 
+void mdnotebook_bufitem_registered(MdNotebookBufItem* self, MdNotebookBuffer* buffer) {
+	MdNotebookBufItemClass* class;
 	g_return_if_fail(MDNOTEBOOK_IS_BUFITEM(self));
 
-	iface = MDNOTEBOOK_BUFITEM_GET_IFACE(self);
-	if (iface->init != NULL)
-		iface->init(self, buffer);
+	class = MDNOTEBOOK_BUFITEM_GET_CLASS(self);
+	if (class->registered != NULL)
+		class->registered(self, buffer);
 }
 
 void mdnotebook_bufitem_cursor_changed(MdNotebookBufItem *self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end) {
-	MdNotebookBufItemInterface *iface;
-
+	MdNotebookBufItemClass* class;
 	g_return_if_fail(MDNOTEBOOK_IS_BUFITEM(self));
 
-	iface = MDNOTEBOOK_BUFITEM_GET_IFACE(self);
-	if (iface->cursor_changed)
-		iface->cursor_changed(self, buffer, start, end);
+	class = MDNOTEBOOK_BUFITEM_GET_CLASS(self);
+	if (class->cursor_changed != NULL)
+		class->cursor_changed(self, buffer, start, end);
 }
 
 void mdnotebook_bufitem_buffer_changed(MdNotebookBufItem *self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end) {
-	MdNotebookBufItemInterface *iface;
-
+	MdNotebookBufItemClass* class;
 	g_return_if_fail(MDNOTEBOOK_IS_BUFITEM(self));
 
-	iface = MDNOTEBOOK_BUFITEM_GET_IFACE(self);
-	g_return_if_fail (iface->buffer_changed != NULL);
-	iface->buffer_changed(self, buffer, start, end);
+	class = MDNOTEBOOK_BUFITEM_GET_CLASS(self);
+	g_return_if_fail (class->buffer_changed != NULL);
+	class->buffer_changed(self, buffer, start, end);
 }
 
 void mdnotebook_bufitem_on_insert(MdNotebookBufItem* self, MdNotebookBuffer* buffer, GtkTextMark* location, gchar* text, gint len) {
-	MdNotebookBufItemInterface *iface;
-
+	MdNotebookBufItemClass* class;
 	g_return_if_fail(MDNOTEBOOK_IS_BUFITEM(self));
 
-	iface = MDNOTEBOOK_BUFITEM_GET_IFACE(self);
-	if (iface->on_insert)
-		iface->on_insert(self, buffer, location, text, len);
+	class = MDNOTEBOOK_BUFITEM_GET_CLASS(self);
+	if (class->on_insert)
+		class->on_insert(self, buffer, location, text, len);
 }
 
 

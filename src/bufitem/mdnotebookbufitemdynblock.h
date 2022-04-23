@@ -9,12 +9,10 @@
 G_BEGIN_DECLS
 
 #define MDNOTEBOOK_TYPE_BUFITEM_DYNBLOCK (mdnotebook_bufitem_dynblock_get_type())
-G_DECLARE_DERIVABLE_TYPE (MdNotebookBufItemDynBlock, mdnotebook_bufitem_dynblock, MDNOTEBOOK, BUFITEM_DYNBLOCK, GObject)
+G_DECLARE_DERIVABLE_TYPE (MdNotebookBufItemDynBlock, mdnotebook_bufitem_dynblock, MDNOTEBOOK, BUFITEM_DYNBLOCK, MdNotebookBufItem)
 
 struct _MdNotebookBufItemDynBlockClass {
-	GObjectClass parent_class;
-
-	gpointer padding[12];
+	MdNotebookBufItemClass parent_class;
 };
 
 MdNotebookBufItem* mdnotebook_bufitem_dynblock_new();

@@ -2,10 +2,7 @@
 
 #define _ __attribute__((unused))
 
-static void mdnotebook_bufitem_codeblock_bufitem_iface_init(MdNotebookBufItemInterface* iface);
-
-G_DEFINE_TYPE_WITH_CODE(MdNotebookBufItemCodeblock, mdnotebook_bufitem_codeblock, G_TYPE_OBJECT,
-	G_IMPLEMENT_INTERFACE(MDNOTEBOOK_TYPE_BUFITEM, mdnotebook_bufitem_codeblock_bufitem_iface_init))
+G_DEFINE_TYPE(MdNotebookBufItemCodeblock, mdnotebook_bufitem_codeblock, MDNOTEBOOK_TYPE_BUFITEM)
 
 static void strip_codeblocktag(GtkTextBuffer* buf, const GtkTextIter* start, const GtkTextIter* end) {
 	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
@@ -100,10 +97,10 @@ static void mdnotebook_bufitem_codeblock_bufitem_on_insert(_ MdNotebookBufItem* 
 	}
 }
 
-static void mdnotebook_bufitem_codeblock_class_init(_ MdNotebookBufItemCodeblockClass* class) {}
-static void mdnotebook_bufitem_codeblock_bufitem_iface_init(MdNotebookBufItemInterface* iface) {
-	iface->buffer_changed = mdnotebook_bufitem_codeblock_bufitem_buffer_changed;
-	iface->on_insert = mdnotebook_bufitem_codeblock_bufitem_on_insert;
+static void mdnotebook_bufitem_codeblock_class_init(MdNotebookBufItemCodeblockClass* class) {
+	MdNotebookBufItemClass* bufitem = MDNOTEBOOK_BUFITEM_CLASS(class);
+	bufitem->buffer_changed = mdnotebook_bufitem_codeblock_bufitem_buffer_changed;
+	bufitem->on_insert = mdnotebook_bufitem_codeblock_bufitem_on_insert;
 }
 
 static void mdnotebook_bufitem_codeblock_init(_ MdNotebookBufItemCodeblock* self) {}

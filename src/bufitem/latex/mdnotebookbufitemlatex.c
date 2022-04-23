@@ -2,16 +2,12 @@
 
 #define _ __attribute__((unused))
 
-static void mdnotebook_bufitem_latex_bufitem_iface_init(MdNotebookBufItemInterface* iface);
-
 typedef struct {
 	MdNotebookView* view;
 	GtkTextMark* last_position;
 } MdNotebookBufItemLatexPrivate;
 
-G_DEFINE_TYPE_WITH_CODE(MdNotebookBufItemLatex, mdnotebook_bufitem_latex, G_TYPE_OBJECT,
-	G_ADD_PRIVATE (MdNotebookBufItemLatex)
-	G_IMPLEMENT_INTERFACE(MDNOTEBOOK_TYPE_BUFITEM, mdnotebook_bufitem_latex_bufitem_iface_init))
+G_DEFINE_TYPE_WITH_PRIVATE(MdNotebookBufItemLatex, mdnotebook_bufitem_latex, MDNOTEBOOK_TYPE_BUFITEM)
 
 enum {
 	PROP_TEXTVIEW = 1,
@@ -53,7 +49,7 @@ static void mdnotebook_bufitem_latex_dispose(GObject* object) {
 	G_OBJECT_CLASS(mdnotebook_bufitem_latex_parent_class)->dispose(object);
 }
 
-static void mdnotebook_bufitem_latex_bufitem_init(MdNotebookBufItem* iface, MdNotebookBuffer* self) {
+static void mdnotebook_bufitem_latex_bufitem_registered(MdNotebookBufItem* iface, MdNotebookBuffer* self) {
 	MdNotebookBufItemLatexPrivate* priv = mdnotebook_bufitem_latex_get_instance_private(MDNOTEBOOK_BUFITEM_LATEX(iface));
 	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
 	GtkTextIter cursor;
@@ -358,17 +354,18 @@ static void mdnotebook_bufitem_latex_bufitem_buffer_changed(MdNotebookBufItem* i
 
 static void mdnotebook_bufitem_latex_class_init(MdNotebookBufItemLatexClass* class) {
 	GObjectClass* object_class = G_OBJECT_CLASS(class);
+	MdNotebookBufItemClass* bufitem_class = MDNOTEBOOK_BUFITEM_CLASS(class);
+
 	object_class->get_property = mdnotebook_bufitem_latex_get_property;
 	object_class->set_property = mdnotebook_bufitem_latex_set_property;
 	object_class->dispose = mdnotebook_bufitem_latex_dispose;
 
+	bufitem_class->registered = mdnotebook_bufitem_latex_bufitem_registered;
+	bufitem_class->cursor_changed = mdnotebook_bufitem_latex_bufitem_cursor_changed;
+	bufitem_class->buffer_changed = mdnotebook_bufitem_latex_bufitem_buffer_changed;
+
 	obj_properties[PROP_TEXTVIEW] = g_param_spec_object("textview", "TextView", "The Gtk.TextView this BufItem will be rendering in", MDNOTEBOOK_TYPE_VIEW, G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_EXPLICIT_NOTIFY);
 	g_object_class_install_properties(object_class, N_PROPERTIES, obj_properties);
-}
-static void mdnotebook_bufitem_latex_bufitem_iface_init(MdNotebookBufItemInterface* iface) {
-	iface->init = mdnotebook_bufitem_latex_bufitem_init;
-	iface->cursor_changed = mdnotebook_bufitem_latex_bufitem_cursor_changed;
-	iface->buffer_changed = mdnotebook_bufitem_latex_bufitem_buffer_changed;
 }
 
 static void mdnotebook_bufitem_latex_init(MdNotebookBufItemLatex* self) {

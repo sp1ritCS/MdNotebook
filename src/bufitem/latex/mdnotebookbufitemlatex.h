@@ -11,12 +11,10 @@
 G_BEGIN_DECLS
 
 #define MDNOTEBOOK_TYPE_BUFITEM_LATEX (mdnotebook_bufitem_latex_get_type())
-G_DECLARE_DERIVABLE_TYPE (MdNotebookBufItemLatex, mdnotebook_bufitem_latex, MDNOTEBOOK, BUFITEM_LATEX, GObject)
+G_DECLARE_DERIVABLE_TYPE (MdNotebookBufItemLatex, mdnotebook_bufitem_latex, MDNOTEBOOK, BUFITEM_LATEX, MdNotebookBufItem)
 
 struct _MdNotebookBufItemLatexClass {
-	GObjectClass parent_class;
-
-	gpointer padding[12];
+	MdNotebookBufItemClass parent_class;
 };
 
 MdNotebookBufItem* mdnotebook_bufitem_latex_new(MdNotebookView* textview);

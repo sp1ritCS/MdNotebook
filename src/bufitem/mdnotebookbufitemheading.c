@@ -2,10 +2,7 @@
 
 #define _ __attribute__((unused))
 
-static void mdnotebook_bufitem_heading_bufitem_iface_init(MdNotebookBufItemInterface* iface);
-
-G_DEFINE_TYPE_WITH_CODE(MdNotebookBufItemHeading, mdnotebook_bufitem_heading, G_TYPE_OBJECT,
-	G_IMPLEMENT_INTERFACE(MDNOTEBOOK_TYPE_BUFITEM, mdnotebook_bufitem_heading_bufitem_iface_init))
+G_DEFINE_TYPE(MdNotebookBufItemHeading, mdnotebook_bufitem_heading, MDNOTEBOOK_TYPE_BUFITEM)
 
 gchar valid_titletags[6][9] = {"mdtitle1", "mdtitle2", "mdtitle3", "mdtitle4", "mdtitle5", "mdtitle6"};
 static void strip_titletags(GtkTextBuffer* buf, const GtkTextIter* start, const GtkTextIter* end) {
@@ -104,9 +101,8 @@ skip_check:
 	}
 }
 
-static void mdnotebook_bufitem_heading_class_init(_ MdNotebookBufItemHeadingClass* class) {}
-static void mdnotebook_bufitem_heading_bufitem_iface_init(MdNotebookBufItemInterface* iface) {
-	iface->buffer_changed = mdnotebook_bufitem_heading_bufitem_buffer_changed;
+static void mdnotebook_bufitem_heading_class_init(_ MdNotebookBufItemHeadingClass* class) {
+	MDNOTEBOOK_BUFITEM_CLASS(class)->buffer_changed = mdnotebook_bufitem_heading_bufitem_buffer_changed;
 }
 
 static void mdnotebook_bufitem_heading_init(_ MdNotebookBufItemHeading* self) {}

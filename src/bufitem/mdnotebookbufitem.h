@@ -9,12 +9,12 @@
 G_BEGIN_DECLS
 
 #define MDNOTEBOOK_TYPE_BUFITEM (mdnotebook_bufitem_get_type())
-G_DECLARE_INTERFACE (MdNotebookBufItem, mdnotebook_bufitem, MDNOTEBOOK, BUFITEM, GObject)
+G_DECLARE_DERIVABLE_TYPE (MdNotebookBufItem, mdnotebook_bufitem, MDNOTEBOOK, BUFITEM, GObject)
 
-struct _MdNotebookBufItemInterface {
-	GTypeInterface parent_iface;
+struct _MdNotebookBufItemClass {
+	GObjectClass parent_class;
 
-	void (*init) (MdNotebookBufItem* self, MdNotebookBuffer* buffer);
+	void (*registered) (MdNotebookBufItem* self, MdNotebookBuffer* buffer);
 	void (*cursor_changed) (MdNotebookBufItem* self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end);
 	void (*buffer_changed) (MdNotebookBufItem* self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end);
 	void (*on_insert) (MdNotebookBufItem* self, MdNotebookBuffer* buffer, GtkTextMark* location, gchar* text, gint len);
@@ -22,7 +22,7 @@ struct _MdNotebookBufItemInterface {
 	gpointer padding[12];
 };
 
-void mdnotebook_bufitem_init(MdNotebookBufItem* self, MdNotebookBuffer* buffer);
+void mdnotebook_bufitem_registered(MdNotebookBufItem* self, MdNotebookBuffer* buffer);
 void mdnotebook_bufitem_cursor_changed(MdNotebookBufItem *self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end);
 void mdnotebook_bufitem_buffer_changed(MdNotebookBufItem *self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end);
 void mdnotebook_bufitem_on_insert(MdNotebookBufItem* self, MdNotebookBuffer* buffer, GtkTextMark* location, gchar* text, gint len);

@@ -142,7 +142,7 @@ void mdnotebook_buffer_add_bufitem(MdNotebookBuffer* self, MdNotebookBufItem* it
 		g_warning("%s is already registered in the MdNotebook.Buffer\n", g_type_name(G_OBJECT_TYPE(item)));
 	} else {
 		g_list_store_append(priv->bufitems, item);
-		mdnotebook_bufitem_init(item, self);
+		mdnotebook_bufitem_registered(item, self);
 	}
 
 	g_object_unref(item);

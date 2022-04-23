@@ -9,12 +9,10 @@
 G_BEGIN_DECLS
 
 #define MDNOTEBOOK_TYPE_BUFITEM_HEADING (mdnotebook_bufitem_heading_get_type())
-G_DECLARE_DERIVABLE_TYPE (MdNotebookBufItemHeading, mdnotebook_bufitem_heading, MDNOTEBOOK, BUFITEM_HEADING, GObject)
+G_DECLARE_DERIVABLE_TYPE (MdNotebookBufItemHeading, mdnotebook_bufitem_heading, MDNOTEBOOK, BUFITEM_HEADING, MdNotebookBufItem)
 
 struct _MdNotebookBufItemHeadingClass {
-	GObjectClass parent_class;
-
-	gpointer padding[12];
+	MdNotebookBufItemClass parent_class;
 };
 
 MdNotebookBufItem* mdnotebook_bufitem_heading_new();

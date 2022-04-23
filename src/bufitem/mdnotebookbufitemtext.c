@@ -2,10 +2,7 @@
 
 #define _ __attribute__((unused))
 
-static void mdnotebook_bufitem_text_bufitem_iface_init(MdNotebookBufItemInterface* iface);
-
-G_DEFINE_TYPE_WITH_CODE(MdNotebookBufItemText, mdnotebook_bufitem_text, G_TYPE_OBJECT,
-	G_IMPLEMENT_INTERFACE(MDNOTEBOOK_TYPE_BUFITEM, mdnotebook_bufitem_text_bufitem_iface_init))
+G_DEFINE_TYPE(MdNotebookBufItemText, mdnotebook_bufitem_text, MDNOTEBOOK_TYPE_BUFITEM)
 
 typedef struct {
 	char* tagname;
@@ -290,10 +287,11 @@ static void mdnotebook_bufitem_text_bufitem_buffer_changed(_ MdNotebookBufItem* 
 	mdnotebook_bufitem_text_apply_tilde_items(self, start, end);
 }
 
-static void mdnotebook_bufitem_text_class_init(_ MdNotebookBufItemTextClass* class) {}
-static void mdnotebook_bufitem_text_bufitem_iface_init(MdNotebookBufItemInterface* iface) {
-	iface->cursor_changed = mdnotebook_bufitem_text_bufitem_cursor_changed;
-	iface->buffer_changed = mdnotebook_bufitem_text_bufitem_buffer_changed;
+static void mdnotebook_bufitem_text_class_init(_ MdNotebookBufItemTextClass* class) {
+	MdNotebookBufItemClass* bufitem = MDNOTEBOOK_BUFITEM_CLASS(class);
+
+	bufitem->cursor_changed = mdnotebook_bufitem_text_bufitem_cursor_changed;
+	bufitem->buffer_changed = mdnotebook_bufitem_text_bufitem_buffer_changed;
 }
 
 static void mdnotebook_bufitem_text_init(_ MdNotebookBufItemText* self) {}

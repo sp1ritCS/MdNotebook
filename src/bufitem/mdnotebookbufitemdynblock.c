@@ -2,10 +2,7 @@
 
 #define _ __attribute__((unused))
 
-static void mdnotebook_bufitem_dynblock_bufitem_iface_init(MdNotebookBufItemInterface* iface);
-
-G_DEFINE_TYPE_WITH_CODE(MdNotebookBufItemDynBlock, mdnotebook_bufitem_dynblock, G_TYPE_OBJECT,
-	G_IMPLEMENT_INTERFACE(MDNOTEBOOK_TYPE_BUFITEM, mdnotebook_bufitem_dynblock_bufitem_iface_init))
+G_DEFINE_TYPE(MdNotebookBufItemDynBlock, mdnotebook_bufitem_dynblock, MDNOTEBOOK_TYPE_BUFITEM)
 
 typedef struct {
 	gint linenum;
@@ -129,10 +126,11 @@ static void mdnotebook_bufitem_dynblock_bufitem_on_insert(_ MdNotebookBufItem* i
 	}
 }
 
-static void mdnotebook_bufitem_dynblock_class_init(_ MdNotebookBufItemDynBlockClass* class) {}
-static void mdnotebook_bufitem_dynblock_bufitem_iface_init(MdNotebookBufItemInterface* iface) {
-	iface->buffer_changed = mdnotebook_bufitem_dynblock_bufitem_buffer_changed;
-	iface->on_insert = mdnotebook_bufitem_dynblock_bufitem_on_insert;
+static void mdnotebook_bufitem_dynblock_class_init(_ MdNotebookBufItemDynBlockClass* class) {
+	MdNotebookBufItemClass* bufitem = MDNOTEBOOK_BUFITEM_CLASS(class);
+
+	bufitem->buffer_changed = mdnotebook_bufitem_dynblock_bufitem_buffer_changed;
+	bufitem->on_insert = mdnotebook_bufitem_dynblock_bufitem_on_insert;
 }
 
 static void mdnotebook_bufitem_dynblock_init(_ MdNotebookBufItemDynBlock* self) {}

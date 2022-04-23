@@ -9,12 +9,10 @@
 G_BEGIN_DECLS
 
 #define MDNOTEBOOK_TYPE_BUFITEM_TEXT (mdnotebook_bufitem_text_get_type())
-G_DECLARE_DERIVABLE_TYPE (MdNotebookBufItemText, mdnotebook_bufitem_text, MDNOTEBOOK, BUFITEM_TEXT, GObject)
+G_DECLARE_DERIVABLE_TYPE (MdNotebookBufItemText, mdnotebook_bufitem_text, MDNOTEBOOK, BUFITEM_TEXT, MdNotebookBufferClass)
 
 struct _MdNotebookBufItemTextClass {
-	GObjectClass parent_class;
-
-	gpointer padding[12];
+	MdNotebookBufferClass parent_class;
 };
 
 MdNotebookBufItem* mdnotebook_bufitem_text_new();
