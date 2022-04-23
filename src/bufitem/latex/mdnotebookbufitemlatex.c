@@ -298,6 +298,7 @@ static void mdnotebook_bufitem_latex_apply_dollar_items(MdNotebookBufItemLatex* 
 			if (!anch) {
 				GtkTextMark* mark = gtk_text_buffer_create_mark(buf, NULL, &latex_begin, TRUE);
 				mdnotebook_bufitem_latex_queue_child_anchor(latex, mark);
+				return;
 			} else {
 				gchar* equation = gtk_text_iter_get_text(&latex_begin, &active);
 				guint num;
