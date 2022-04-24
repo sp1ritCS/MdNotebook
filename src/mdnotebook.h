@@ -6,12 +6,17 @@
 #ifdef MDNOTEBOOK_HAVE_LATEX
 #include <bufitem/latex/mdnotebookbufitemlatex.h>
 #include <bufitem/latex/mdnotebooklatexequation.h>
+
+#include <bufitem/latex2/mdnotebookbufitemlatextwo.h>
 #endif
 
 #include <bufitem/mdnotebookbufitem.h>
 #include <bufitem/mdnotebookbufitemdynblock.h>
 #include <bufitem/mdnotebookbufitemheading.h>
 #include <bufitem/mdnotebookbufitemtext.h>
+
+#include <bufitem/mdnotebookproxbufitem.h>
+
 
 #include <mdnotebookbuffer.h>
 #include <mdnotebookbufferextra.h>

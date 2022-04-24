@@ -11,7 +11,10 @@
 
 #ifdef MDNOTEBOOK_HAVE_LATEX
 #include "bufitem/latex/mdnotebookbufitemlatex.h"
+#include "bufitem/latex2/mdnotebookbufitemlatextwo.h"
 #endif
+
+#define _ __attribute__((unused))
 
 static GtkTextBuffer* mdnotebook_view_create_buffer(GtkTextView*) {
 	return mdnotebook_buffer_new(NULL);
@@ -19,7 +22,8 @@ static GtkTextBuffer* mdnotebook_view_create_buffer(GtkTextView*) {
 
 
 typedef struct {
-	guint8 none;
+	GdkModifierType modifier_keys;
+	guint latest_keyval;
 } MdNotebookViewPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (MdNotebookView, mdnotebook_view, GTK_TYPE_TEXT_VIEW)
@@ -46,16 +50,33 @@ static void mdnotebook_view_class_init(MdNotebookViewClass* class) {
 		G_TYPE_NONE, 1, G_TYPE_INT);
 }
 
-static void mdnotebook_view_init(MdNotebookView* self) {
+static gboolean mdnotebook_view_key_pressed(_ GtkEventController* ctl, guint keyval, _ guint keycode, GdkModifierType state, MdNotebookView* self) {
+	g_return_val_if_fail(MDNOTEBOOK_IS_VIEW(self), FALSE);
 	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
 
+	priv->modifier_keys = state & (GDK_MODIFIER_MASK);
+	priv->latest_keyval = keyval;
+
+	return FALSE;
+}
+
+static void mdnotebook_view_init(MdNotebookView* self) {
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
 	MdNotebookBuffer* buffer = MDNOTEBOOK_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(self)));
+
+	priv->modifier_keys = 0;
+	priv->latest_keyval = 0;
+
+	GtkEventController* keyctl = gtk_event_controller_key_new();
+	g_signal_connect(keyctl, "key-pressed", G_CALLBACK(mdnotebook_view_key_pressed), self);
+	gtk_widget_add_controller(GTK_WIDGET(self), keyctl);
 
 	MdNotebookBufItem* codeblock = mdnotebook_bufitem_codeblock_new();
 	MdNotebookBufItem* title = mdnotebook_bufitem_heading_new();
 
 #ifdef MDNOTEBOOK_HAVE_LATEX
-	MdNotebookBufItem* latex = mdnotebook_bufitem_latex_new(self);
+	//MdNotebookBufItem* latex = mdnotebook_bufitem_latex_new(self);
+	MdNotebookBufItem* latex = mdnotebook_bufitem_latex_two_new(self);
 	mdnotebook_buffer_add_bufitem(buffer, latex);
 #endif
 
@@ -76,4 +97,18 @@ GtkWidget* mdnotebook_view_new_with_buffer(MdNotebookBuffer* buffer) {
 	gtk_text_view_set_buffer(GTK_TEXT_VIEW(view), GTK_TEXT_BUFFER(buffer));
 
 	return view;
+}
+
+GdkModifierType mdnotebook_view_get_modifier_keys(MdNotebookView* self) {
+	g_return_val_if_fail(MDNOTEBOOK_IS_VIEW(self), 0);
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
+
+	return priv->modifier_keys;
+}
+
+guint mdnotebook_view_get_latest_keyval(MdNotebookView* self) {
+	g_return_val_if_fail(MDNOTEBOOK_IS_VIEW(self), 0);
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
+
+	return priv->latest_keyval;
 }

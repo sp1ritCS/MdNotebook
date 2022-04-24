@@ -10,7 +10,9 @@ src = [
     'bufitem/mdnotebookbufitemcodeblock.c',
     'bufitem/mdnotebookbufitemdynblock.c',
     'bufitem/mdnotebookbufitemheading.c',
-    'bufitem/mdnotebookbufitemtext.c'
+    'bufitem/mdnotebookbufitemtext.c',
+
+    'bufitem/mdnotebookproxbufitem.c',
   ]
 ]
 
@@ -27,6 +29,8 @@ headers = [
     'bufitem/mdnotebookbufitemdynblock.h',
     'bufitem/mdnotebookbufitemheading.h',
     'bufitem/mdnotebookbufitemtext.h',
+
+    'bufitem/mdnotebookproxbufitem.h',
   ]
 ]
 
@@ -37,11 +41,13 @@ if microtex.found() and microtex_cairo.found()
   if add_languages('cpp', required: get_option('latex'))
     src += [
       'bufitem/latex/mdnotebookbufitemlatex.c',
-      'bufitem/latex/mdnotebooklatexequation.cpp'
+      'bufitem/latex/mdnotebooklatexequation.cpp',
+      'bufitem/latex2/mdnotebookbufitemlatextwo.c',
     ]
     headers += [
       'bufitem/latex/mdnotebookbufitemlatex.h',
-      'bufitem/latex/mdnotebooklatexequation.h'
+      'bufitem/latex/mdnotebooklatexequation.h',
+      'bufitem/latex2/mdnotebookbufitemlatextwo.h',
     ]
 
     conf_data.set('MDNOTEBOOK_HAVE_LATEX', true)

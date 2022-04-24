@@ -23,8 +23,13 @@ struct _MdNotebookBufItemClass {
 	gpointer padding[12];
 };
 
+void mdnotebook_bufitem_push_iter(MdNotebookBufItem* self, const GtkTextIter* i);
+void mdnotebook_bufitem_pop_iter(MdNotebookBufItem* self, GtkTextIter* i);
+
 MdNotebookView* mdnotebook_bufitem_get_textview(MdNotebookBufItem* self);
 void mdnotebook_bufitem_set_textview(MdNotebookBufItem* self, MdNotebookView* view);
+
+MdNotebookBuffer* mdnotebook_bufitem_get_buffer(MdNotebookBufItem* self);
 
 void mdnotebook_bufitem_registered(MdNotebookBufItem* self, MdNotebookBuffer* buffer);
 void mdnotebook_bufitem_cursor_changed(MdNotebookBufItem *self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end);

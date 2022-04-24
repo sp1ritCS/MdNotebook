@@ -4,6 +4,7 @@
 
 typedef struct {
 	MdNotebookView* view;
+	GSList* iter_stack;
 } MdNotebookBufItemPrivate;
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (MdNotebookBufItem, mdnotebook_bufitem, G_TYPE_OBJECT)
@@ -66,6 +67,37 @@ static void mdnotebook_bufitem_class_init(MdNotebookBufItemClass* class) {
 
 static void mdnotebook_bufitem_init(_ MdNotebookBufItem* self) {}
 
+void mdnotebook_bufitem_push_iter(MdNotebookBufItem* self, const GtkTextIter* i) {
+	MdNotebookBufItemPrivate* priv;
+	g_return_if_fail(MDNOTEBOOK_IS_BUFITEM(self));
+	priv = mdnotebook_bufitem_get_instance_private(self);
+	MdNotebookBuffer* buffer = mdnotebook_bufitem_get_buffer(self);
+	GtkTextBuffer* buf = GTK_TEXT_BUFFER(buffer);
+
+	GSList* prev = priv->iter_stack;
+	GSList* node = g_slist_alloc();
+	node->data = gtk_text_buffer_create_mark(buf, NULL, i, TRUE);
+	node->next = prev;
+	priv->iter_stack = node;
+}
+
+void mdnotebook_bufitem_pop_iter(MdNotebookBufItem* self, GtkTextIter* i) {
+	MdNotebookBufItemPrivate* priv;
+	g_return_if_fail(MDNOTEBOOK_IS_BUFITEM(self));
+	priv = mdnotebook_bufitem_get_instance_private(self);
+	MdNotebookBuffer* buffer = mdnotebook_bufitem_get_buffer(self);
+	GtkTextBuffer* buf = GTK_TEXT_BUFFER(buffer);
+
+	GtkTextMark* mark = priv->iter_stack->data;
+
+	gtk_text_buffer_get_iter_at_mark(buf, i, mark);
+	gtk_text_buffer_delete_mark(buf, mark);
+
+	GSList* prev = priv->iter_stack->next;
+	g_slist_free_1(priv->iter_stack);
+	priv->iter_stack = prev;
+}
+
 MdNotebookView* mdnotebook_bufitem_get_textview(MdNotebookBufItem* self) {
 	MdNotebookBufItemPrivate* priv;
 
@@ -90,6 +122,11 @@ void mdnotebook_bufitem_set_textview(MdNotebookBufItem* self, MdNotebookView* vi
 	priv->view = g_object_ref(view);
 
 	g_object_notify_by_pspec(G_OBJECT(self), obj_properties[PROP_TEXTVIEW]);
+}
+
+MdNotebookBuffer* mdnotebook_bufitem_get_buffer(MdNotebookBufItem* self) {
+	MdNotebookView* view = mdnotebook_bufitem_get_textview(self);
+	return MDNOTEBOOK_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(view)));
 }
 
 void mdnotebook_bufitem_registered(MdNotebookBufItem* self, MdNotebookBuffer* buffer) {
@@ -194,22 +231,30 @@ gboolean mdnotebook_bufitem_check_backward_whitespace(const GtkTextIter* ch) {
 gboolean mdnotebook_bufitem_get_tag_extends(const GtkTextIter* t, GtkTextTag* tag, GtkTextIter* left, GtkTextIter* right) {
 	GtkTextIter active = *t;
 	if (gtk_text_iter_starts_tag(&active, tag)) {
-		*left = active;
+		if (left)
+			*left = active;
 		gtk_text_iter_forward_to_tag_toggle(&active, tag);
-		*right = active;
+		if (right)
+			*right = active;
 		return TRUE;
 	}
 	if (gtk_text_iter_ends_tag(&active, tag)) {
-		*right = active;
+		if (right)
+			*right = active;
 		gtk_text_iter_backward_to_tag_toggle(&active, tag);
-		*left = active;
+		if (left)
+			*left = active;
 		return TRUE;
 	}
 	if (gtk_text_iter_has_tag(&active, tag)) {
-		*left = active;
-		gtk_text_iter_backward_to_tag_toggle(left, tag);
-		*right = active;
-		gtk_text_iter_forward_to_tag_toggle(right, tag);
+		if (left) {
+			*left = active;
+			gtk_text_iter_backward_to_tag_toggle(left, tag);
+		}
+		if (right) {
+			*right = active;
+			gtk_text_iter_forward_to_tag_toggle(right, tag);
+		}
 		return TRUE;
 	}
 	return FALSE;

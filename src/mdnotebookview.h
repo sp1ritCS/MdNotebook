@@ -20,6 +20,9 @@ struct _MdNotebookViewClass {
 GtkWidget* mdnotebook_view_new(void);
 GtkWidget* mdnotebook_view_new_with_buffer(MdNotebookBuffer* buffer);
 
+GdkModifierType mdnotebook_view_get_modifier_keys(MdNotebookView* self);
+guint mdnotebook_view_get_latest_keyval(MdNotebookView* self);
+
 G_END_DECLS
 
 #endif // __GTKMDNOTEBOOKVIEW_H__
