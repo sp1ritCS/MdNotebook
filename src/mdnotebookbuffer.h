@@ -18,6 +18,9 @@ struct _MdNotebookBufferClass {
 
 GtkTextBuffer* mdnotebook_buffer_new(GtkTextTagTable* table);
 
+void mdnotebook_buffer_lock_bufchange(MdNotebookBuffer* self);
+void mdnotebook_buffer_unlock_bufchange(MdNotebookBuffer* self);
+
 G_END_DECLS
 
 #endif // __GTKMDNOTEBOOKBUFFER_H__

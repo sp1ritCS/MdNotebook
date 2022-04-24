@@ -6,8 +6,6 @@ typedef struct {
 	GtkTextMark* last_position;
 	GtkTextTag* invisible;
 	GtkTextTag* proximity;
-
-	gboolean ops;
 } MdNotebookProxBufItemPrivate;
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (MdNotebookProxBufItem, mdnotebook_proxbufitem, MDNOTEBOOK_TYPE_BUFITEM)
@@ -69,7 +67,9 @@ static gboolean mdnotebook_proxbufitem_queue_child_anchor_cb(QueuedChildAnchor* 
 	gtk_text_buffer_get_iter_at_mark(buf, &start, queue->mark);
 
 	if (!gtk_text_iter_get_child_anchor(&start)) {
+		mdnotebook_buffer_lock_bufchange(MDNOTEBOOK_BUFFER(buf));
 		gtk_text_buffer_create_child_anchor(buf, &start);
+		mdnotebook_buffer_unlock_bufchange(MDNOTEBOOK_BUFFER(buf));
 
 		gtk_text_buffer_get_iter_at_mark(buf, &start, queue->mark);
 		gtk_text_iter_forward_char(&start);
@@ -329,10 +329,7 @@ static void mdnotebook_proxbufitem_render_outstanding(MarkerCombo* cmb, MdNotebo
 
 
 static gboolean mdnotebook_proxbufitem_bufitem_buffer_changed_cb(ChangedQueue* queue) {
-	MdNotebookProxBufItemPrivate* priv = mdnotebook_proxbufitem_get_instance_private(queue->self);
-	priv->ops = TRUE;
 	g_slist_foreach(queue->renderlist, CAST_GFUNC(mdnotebook_proxbufitem_render_outstanding), queue->self);
-	priv->ops = FALSE;
 	g_slist_free(g_steal_pointer(&queue->renderlist));
 	g_object_unref(queue->self);
 	g_free(queue);
@@ -343,9 +340,6 @@ void mdnotebook_proxbufitem_bufitem_buffer_changed(MdNotebookBufItem* self, MdNo
 	MdNotebookProxBufItemClass* class = MDNOTEBOOK_PROXBUFITEM_GET_CLASS(self);
 	MdNotebookProxBufItemPrivate* priv = mdnotebook_proxbufitem_get_instance_private(MDNOTEBOOK_PROXBUFITEM(self));
 	GtkTextBuffer* buf = GTK_TEXT_BUFFER(buffer);
-
-	if (priv->ops)
-		return;
 
 	GtkTextTag* tag = class->tag(MDNOTEBOOK_PROXBUFITEM(self));
 	if (!tag)
@@ -401,5 +395,4 @@ static void mdnotebook_proxbufitem_class_init(MdNotebookProxBufItemClass* class)
 static void mdnotebook_proxbufitem_init(MdNotebookProxBufItem* self) {
 	MdNotebookProxBufItemPrivate* priv = mdnotebook_proxbufitem_get_instance_private(self);
 	priv->last_position = NULL;
-	priv->ops = FALSE;
 }

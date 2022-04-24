@@ -6,6 +6,7 @@
 
 typedef struct {
 	GListStore* bufitems;
+	gboolean locked_bufchange;
 } MdNotebookBufferPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (MdNotebookBuffer, mdnotebook_buffer, GTK_TYPE_TEXT_BUFFER)
@@ -33,6 +34,9 @@ static void mdnotebook_buffer_cursor_changed(MdNotebookBuffer* self, _ GParamSpe
 static void mdnotebook_buffer_changed(GtkTextBuffer* buf) {
 	MdNotebookBuffer* self = MDNOTEBOOK_BUFFER(buf);
 	MdNotebookBufferPrivate* priv = mdnotebook_buffer_get_instance_private(self);
+
+	if (priv->locked_bufchange)
+		return;
 
 	GtkTextIter start,end;
 	gtk_text_buffer_get_start_iter(buf, &start);
@@ -123,6 +127,7 @@ static void mdnotebook_buffer_init(MdNotebookBuffer* self) {
 	g_signal_connect_object(self, "insert-text", G_CALLBACK(mdnotebook_buffer_on_insert), NULL, G_CONNECT_AFTER);
 
 	priv->bufitems = g_list_store_new(MDNOTEBOOK_TYPE_BUFITEM);
+	priv->locked_bufchange = FALSE;
 }
 
 GtkTextBuffer* mdnotebook_buffer_new(GtkTextTagTable* table) {
@@ -146,4 +151,20 @@ void mdnotebook_buffer_add_bufitem(MdNotebookBuffer* self, MdNotebookBufItem* it
 	}
 
 	g_object_unref(item);
+}
+
+void mdnotebook_buffer_lock_bufchange(MdNotebookBuffer* self) {
+	MdNotebookBufferPrivate* priv;
+	g_return_if_fail(MDNOTEBOOK_IS_BUFFER(self));
+	priv = mdnotebook_buffer_get_instance_private(self);
+
+	priv->locked_bufchange = TRUE;
+}
+
+void mdnotebook_buffer_unlock_bufchange(MdNotebookBuffer* self) {
+	MdNotebookBufferPrivate* priv;
+	g_return_if_fail(MDNOTEBOOK_IS_BUFFER(self));
+	priv = mdnotebook_buffer_get_instance_private(self);
+
+	priv->locked_bufchange = FALSE;
 }
