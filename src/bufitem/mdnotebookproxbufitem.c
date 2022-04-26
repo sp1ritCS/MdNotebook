@@ -329,8 +329,6 @@ static gboolean mdnotebook_proxbufitem_queue_child_removal_cb(GtkTextMark* mark)
 
 	gtk_text_buffer_delete_mark(buf, mark);
 
-	printf("queud removal\n");
-
 	return G_SOURCE_REMOVE;
 }
 static void mdnotebook_proxbufitem_queue_child_removal(GtkTextMark* mark) {

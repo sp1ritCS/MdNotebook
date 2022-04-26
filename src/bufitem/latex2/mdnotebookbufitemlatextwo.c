@@ -75,13 +75,19 @@ static void mdnotebook_bufitem_latex_two_apply_dollar_items(MdNotebookBufItemLat
 			}
 
 			gboolean has_widget = mdnotebook_proxbufitem_test_iter_has_widget(&active);
+			GtkTextIter pre = active;
 
 			guint endlevel = 0;
 			while (gtk_text_iter_get_char(&active) == '$' && endlevel < 2) {
 				endlevel++; gtk_text_iter_forward_char(&active);
 			}
 
-			if (level == endlevel && !has_widget) {
+			if (has_widget) {
+				latex_begin = pre;
+				continue;
+			}
+
+			if (level == endlevel) {
 				valid_latex = TRUE;
 			}
 		}
