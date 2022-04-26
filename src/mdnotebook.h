@@ -16,6 +16,7 @@
 #include <bufitem/mdnotebookbufitemtext.h>
 
 #include <bufitem/mdnotebookproxbufitem.h>
+#include <bufitem/mdnotebookbufitemcheckmark.h>
 
 
 #include <mdnotebookbuffer.h>

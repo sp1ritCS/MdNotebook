@@ -9,6 +9,8 @@
 #include "bufitem/mdnotebookbufitemheading.h"
 #include "bufitem/mdnotebookbufitemtext.h"
 
+#include "bufitem/mdnotebookbufitemcheckmark.h"
+
 #ifdef MDNOTEBOOK_HAVE_LATEX
 #include "bufitem/latex/mdnotebookbufitemlatex.h"
 #include "bufitem/latex2/mdnotebookbufitemlatextwo.h"
@@ -80,10 +82,12 @@ static void mdnotebook_view_init(MdNotebookView* self) {
 	mdnotebook_buffer_add_bufitem(buffer, latex);
 #endif
 
+	MdNotebookBufItem* checkmark = mdnotebook_bufitem_checkmark_new(self);
 	MdNotebookBufItem* dynblock = mdnotebook_bufitem_dynblock_new();
 	MdNotebookBufItem* text = mdnotebook_bufitem_text_new();
 	mdnotebook_buffer_add_bufitem(buffer, codeblock);
 	mdnotebook_buffer_add_bufitem(buffer, title);
+	mdnotebook_buffer_add_bufitem(buffer, checkmark);
 	mdnotebook_buffer_add_bufitem(buffer, dynblock);
 	mdnotebook_buffer_add_bufitem(buffer, text);
 }

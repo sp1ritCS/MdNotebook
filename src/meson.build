@@ -13,6 +13,7 @@ src = [
     'bufitem/mdnotebookbufitemtext.c',
 
     'bufitem/mdnotebookproxbufitem.c',
+    'bufitem/mdnotebookbufitemcheckmark.c',
   ]
 ]
 
@@ -31,6 +32,7 @@ headers = [
     'bufitem/mdnotebookbufitemtext.h',
 
     'bufitem/mdnotebookproxbufitem.h',
+    'bufitem/mdnotebookbufitemcheckmark.h',
   ]
 ]
 

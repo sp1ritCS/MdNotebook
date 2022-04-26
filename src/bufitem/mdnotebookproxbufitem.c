@@ -25,15 +25,9 @@ static void mdnotebook_proxbufitem_bufitem_registered(MdNotebookBufItem* self, M
 	GtkTextBuffer* buf = GTK_TEXT_BUFFER(buffer);
 	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
 
-	GtkTextMark* last_pos = gtk_text_buffer_get_mark(buf, "mdnb:prox:last_position");
-	if (last_pos) {
-		g_object_ref(last_pos);
-	} else {
-		GtkTextIter cursor;
-		gtk_text_buffer_get_iter_at_mark(buf, &cursor, gtk_text_buffer_get_insert(buf));
-		last_pos = gtk_text_buffer_create_mark(buf, "mdnb:prox:last_position", &cursor, true);
-	}
-	priv->last_position = last_pos;
+	GtkTextIter cursor;
+	gtk_text_buffer_get_iter_at_mark(buf, &cursor, gtk_text_buffer_get_insert(buf));
+	priv->last_position = gtk_text_buffer_create_mark(buf, NULL, &cursor, true);
 
 	GtkTextTag* invisible = gtk_text_tag_table_lookup(tagtable, "mdnb:prox:invisible");
 	if (invisible)
