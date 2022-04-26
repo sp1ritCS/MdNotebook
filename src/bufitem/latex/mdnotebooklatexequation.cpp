@@ -3,6 +3,7 @@
 #include <microtex.h>
 #include <graphic_cairo.h>
 #include <utils/exceptions.h>
+#include <utils/nums.h>
 namespace tex = microtex;
 
 class MicroTeXErrorState {
@@ -159,13 +160,18 @@ static void mdnotebook_latex_equation_measure(GtkWidget* widget, GtkOrientation 
 	if (orientation == GTK_ORIENTATION_VERTICAL) {
 		*min = priv->microtex->getHeight() + 1;
 		*nat = priv->microtex->getHeight() + 1;
-		*min_baseline = priv->microtex->getBaseline();
+		if (priv->microtex->getBaseline() == microtex::F_MIN)
+			return;
+		/* *min_baseline = priv->microtex->getBaseline();
 		*nat_baseline = priv->microtex->getBaseline();
 		// when there is no rendered LaTeX, µTeX sets baseline to -F_MAX
 		if (*min_baseline == G_MININT32)
 			*min_baseline = 0;
 		if (*nat_baseline == G_MININT32)
-			*nat_baseline = 0;
+			*nat_baseline = 0;*/
+		gint baseline = (gint)round(0 + *min * (1.0f-priv->microtex->getBaseline()));
+		*min_baseline = baseline;
+		*nat_baseline = baseline;
 	}
 }
 static void mdnotebook_latex_equation_snapshot(GtkWidget* widget, GtkSnapshot* snapshot) {
@@ -470,6 +476,23 @@ void mdnotebook_latex_equation_set_color(MdNotebookLatexEquation* self, guint32 
 	}
 
 	g_object_notify_by_pspec(G_OBJECT(self), obj_properties[PROP_COLOR]);
+}
+
+gint64 mdnotebook_latex_equation_get_baseline(MdNotebookLatexEquation* self) {
+	MdNotebookLatexEquationPrivate* priv;
+	g_return_val_if_fail(MDNOTEBOOK_IS_LATEX_EQUATION(self), -1);
+	priv = MDNOTEBOOK_LATEX_EQUATION_GET_PRIVATE(self);
+
+	if (!priv->microtex)
+		return -1;
+
+	int height = priv->microtex->getHeight();
+	gint64 baseline = (gint64)round(0 + height * (1.0f-priv->microtex->getBaseline()));
+
+	// workaround for not entirely correct baseline arithmetic
+	if(height>12) baseline+=1;
+
+	return baseline;
 }
 
 void mdnotebook_latex_equation_init_microtex() {

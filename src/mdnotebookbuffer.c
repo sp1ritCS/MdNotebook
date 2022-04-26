@@ -7,6 +7,7 @@
 typedef struct {
 	GListStore* bufitems;
 	gboolean locked_bufchange;
+	GHashTable* baseline_tags;
 } MdNotebookBufferPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (MdNotebookBuffer, mdnotebook_buffer, GTK_TYPE_TEXT_BUFFER)
@@ -109,6 +110,7 @@ static void mdnotebook_buffer_dispose(GObject* object) {
 	MdNotebookBufferPrivate* priv = mdnotebook_buffer_get_instance_private(self);
 
 	g_object_unref(priv->bufitems);
+	g_hash_table_unref(priv->baseline_tags);
 }
 
 static void mdnotebook_buffer_class_init(MdNotebookBufferClass* class) {
@@ -128,6 +130,7 @@ static void mdnotebook_buffer_init(MdNotebookBuffer* self) {
 
 	priv->bufitems = g_list_store_new(MDNOTEBOOK_TYPE_BUFITEM);
 	priv->locked_bufchange = FALSE;
+	priv->baseline_tags = g_hash_table_new_full(g_int64_hash, g_int64_equal, NULL, g_object_unref);
 }
 
 GtkTextBuffer* mdnotebook_buffer_new(GtkTextTagTable* table) {
@@ -175,4 +178,22 @@ gboolean* mdnotebook_buffer_get_bufchange_ptr(MdNotebookBuffer* self) {
 	priv = mdnotebook_buffer_get_instance_private(self);
 
 	return &priv->locked_bufchange;
+}
+
+GtkTextTag* mdnotebook_buffer_get_baseline_tag(MdNotebookBuffer* self, gint64 baseline) {
+	if (baseline < 0)
+		return NULL;
+
+	MdNotebookBufferPrivate* priv;
+	g_return_val_if_fail(MDNOTEBOOK_IS_BUFFER(self), NULL);
+	priv = mdnotebook_buffer_get_instance_private(self);
+
+	GtkTextTag* baseline_tag = g_hash_table_lookup(priv->baseline_tags, &baseline);
+	if (!baseline_tag) {
+		baseline_tag = gtk_text_buffer_create_tag(GTK_TEXT_BUFFER(self), NULL,
+			"rise", -PANGO_SCALE*baseline,
+		NULL);
+		g_hash_table_insert(priv->baseline_tags, &baseline, baseline_tag);
+	}
+	return baseline_tag;
 }

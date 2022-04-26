@@ -34,6 +34,8 @@ void mdnotebook_latex_equation_set_text_size(MdNotebookLatexEquation* self, gflo
 guint32 mdnotebook_latex_equation_get_color(MdNotebookLatexEquation* self);
 void mdnotebook_latex_equation_set_color(MdNotebookLatexEquation* self, guint32 color);
 
+gint64 mdnotebook_latex_equation_get_baseline(MdNotebookLatexEquation* self);
+
 void mdnotebook_latex_equation_init_microtex();
 
 G_END_DECLS

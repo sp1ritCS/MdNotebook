@@ -136,6 +136,12 @@ static gboolean mdnotebook_bufitem_two_poxbufitem_test_widget(_ MdNotebookProxBu
 	return MDNOTEBOOK_IS_LATEX_EQUATION(to_test);
 }
 
+static gint64 mdnotebook_bufitem_two_poxbufitem_get_baseline(_ MdNotebookProxBufItem* self, GtkWidget* widget) {
+	g_return_val_if_fail(MDNOTEBOOK_IS_LATEX_EQUATION(widget), -1);
+
+	return mdnotebook_latex_equation_get_baseline((MdNotebookLatexEquation*)widget);
+}
+
 static void mdnotebook_bufitem_latex_two_class_init(MdNotebookBufItemLatexTwoClass* class) {
 	GObjectClass* object_class = G_OBJECT_CLASS(class);
 	MdNotebookBufItemClass* bufitem_class = MDNOTEBOOK_BUFITEM_CLASS(class);
@@ -150,6 +156,7 @@ static void mdnotebook_bufitem_latex_two_class_init(MdNotebookBufItemLatexTwoCla
 	proxbufitem_class->render = mdnotebook_bufitem_latex_two_proxbufitem_render;
 	proxbufitem_class->update = mdnotebook_bufitem_latex_two_proxbufitem_update;
 	proxbufitem_class->test_widget = mdnotebook_bufitem_two_poxbufitem_test_widget;
+	proxbufitem_class->get_baseline = mdnotebook_bufitem_two_poxbufitem_get_baseline;
 }
 
 static void mdnotebook_bufitem_latex_two_init(MdNotebookBufItemLatexTwo* self) {

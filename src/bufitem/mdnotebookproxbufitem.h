@@ -18,6 +18,7 @@ struct _MdNotebookProxBufItemClass {
 	GtkWidget* (*render) (MdNotebookProxBufItem* self, const GtkTextIter* begin, const GtkTextIter* end);
 	void (*update) (MdNotebookProxBufItem* self, GtkWidget* render, const GtkTextIter* begin, const GtkTextIter* end);
 	gboolean (*test_widget) (MdNotebookProxBufItem* self, GtkWidget* widget);
+	gint64 (*get_baseline) (MdNotebookProxBufItem* self, GtkWidget* widget);
 
 	gpointer padding[12];
 };

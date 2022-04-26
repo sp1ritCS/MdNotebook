@@ -126,10 +126,16 @@ static void mdnotebook_proxbufitem_render_widget(MdNotebookProxBufItem* self, co
 			for (guint i = 0; i<num; i++) {
 				class->update(self, ws[i], &j, end);
 				gtk_widget_show(ws[i]);
+				GtkTextTag* baseline = mdnotebook_buffer_get_baseline_tag(MDNOTEBOOK_BUFFER(buf), class->get_baseline(self, ws[i]));
+				if (baseline)
+					gtk_text_buffer_apply_tag(buf, baseline, start, &j);
 			}
 		} else {
 			GtkWidget* b = class->render(self, &j, end);
 			gtk_text_view_add_child_at_anchor(view, b, anch);
+			GtkTextTag* baseline = mdnotebook_buffer_get_baseline_tag(MDNOTEBOOK_BUFFER(buf), class->get_baseline(self, b));
+			if (baseline)
+				gtk_text_buffer_apply_tag(buf, baseline, start, &j);
 		}
 	}
 }
