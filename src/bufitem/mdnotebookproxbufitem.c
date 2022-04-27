@@ -23,20 +23,12 @@ static void mdnotebook_proxbufitem_dispose(GObject* object) {
 static void mdnotebook_proxbufitem_bufitem_registered(MdNotebookBufItem* self, MdNotebookBuffer* buffer) {
 	MdNotebookProxBufItemPrivate* priv = mdnotebook_proxbufitem_get_instance_private(MDNOTEBOOK_PROXBUFITEM(self));
 	GtkTextBuffer* buf = GTK_TEXT_BUFFER(buffer);
-	GtkTextTagTable* tagtable = gtk_text_buffer_get_tag_table(buf);
 
 	GtkTextIter cursor;
 	gtk_text_buffer_get_iter_at_mark(buf, &cursor, gtk_text_buffer_get_insert(buf));
 	priv->last_position = gtk_text_buffer_create_mark(buf, NULL, &cursor, true);
 
-	GtkTextTag* invisible = gtk_text_tag_table_lookup(tagtable, "mdnb:prox:invisible");
-	if (invisible)
-		g_object_ref(invisible);
-	else
-		invisible = gtk_text_buffer_create_tag(buf, "mdnb:prox:invisible",
-			"invisible", TRUE,
-		NULL);
-	priv->invisible = invisible;
+	priv->invisible = mdnotebook_proxbufitem_get_invisible_tag(buffer);
 
 	/*GtkTextTag* proximity = gtk_text_tag_table_lookup(tagtable, "mdnb:prox:proximity");
 	if (proximity)
@@ -463,4 +455,25 @@ gboolean mdnotebook_proxbufitem_test_iter_has_widget(const GtkTextIter* i) {
 	GtkTextIter active = *i;
 	gtk_text_iter_backward_char(&active);
 	return gtk_text_iter_get_char(&active) == _gtk_text_unknown_char;
+}
+
+// Common functions implementors might need
+
+GtkTextTag* mdnotebook_proxbufitem_get_invisible_tag(MdNotebookBuffer* self) {
+	GtkTextBuffer* buf;
+	GtkTextTagTable* tagtable;
+	GtkTextTag* invisible;
+
+	g_return_val_if_fail(MDNOTEBOOK_IS_BUFFER(self), NULL);
+
+	buf = GTK_TEXT_BUFFER(self);
+	tagtable = gtk_text_buffer_get_tag_table(buf);
+
+	invisible = gtk_text_tag_table_lookup(tagtable, "mdnb:prox:invisible");
+	if (!invisible)
+		invisible = gtk_text_buffer_create_tag(buf, "mdnb:prox:invisible",
+			"invisible", TRUE,
+		NULL);
+
+	return invisible;
 }

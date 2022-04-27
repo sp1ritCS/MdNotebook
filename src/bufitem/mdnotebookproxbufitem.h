@@ -27,6 +27,8 @@ void mdnotebook_proxbufitem_bufitem_items_changed(MdNotebookProxBufItem* self, M
 
 gboolean mdnotebook_proxbufitem_test_iter_has_widget(const GtkTextIter* i);
 
+GtkTextTag* mdnotebook_proxbufitem_get_invisible_tag(MdNotebookBuffer* self);
+
 G_END_DECLS
 
 #endif // __MDNOTEBOOKPROXBUFITEM_H__
