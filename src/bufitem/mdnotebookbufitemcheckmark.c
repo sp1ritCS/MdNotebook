@@ -124,18 +124,71 @@ static void mdnotebook_bufitem_checkmark_bufitem_buffer_changed(MdNotebookBufIte
 	mdnotebook_bufitem_checkmark_apply_checkmarked_list_items(MDNOTEBOOK_BUFITEM_CHECKMARK(self), buffer, start, end);
 }
 
-static void mdnotebook_bufitem_checkmark_toggled(GtkCheckButton* self, MdNotebookView* view) {
-	printf("toggled\n");
+static void mdnotebook_bufitem_checkmark_mark_pressed(GtkGestureClick* gest, gint n_press, gdouble, gdouble, gpointer) {
+	if (n_press == 1)
+		gtk_gesture_set_state(GTK_GESTURE(gest), GTK_EVENT_SEQUENCE_CLAIMED);
+}
+static void mdnotebook_bufitem_checkmark_mark_released(GtkGestureClick* gest, gint n_press, gdouble, gdouble, GtkCheckButton* self) {
+	g_return_if_fail(GTK_IS_CHECK_BUTTON(self));
+	if (n_press == 1) {
+		gboolean state = !gtk_check_button_get_active(self);
+		gtk_check_button_set_active(self, state);
+		gtk_gesture_set_state(GTK_GESTURE(gest), GTK_EVENT_SEQUENCE_CLAIMED);
+	}
+}
+static void mdnotebook_bufitem_checkmark_mark_toggled(GtkCheckButton* self, GParamSpec*, GtkTextMark* mark) {
+	g_return_if_fail(GTK_IS_TEXT_MARK(mark));
+	GtkTextBuffer* buf = gtk_text_mark_get_buffer(mark);
+	GtkTextIter active;
+	gtk_text_buffer_get_iter_at_mark(buf, &active, mark);
+
+	gtk_text_iter_forward_char(&active);
+	if (gtk_check_button_get_active(self))
+		gtk_text_buffer_insert(buf, &active, "x", -1);
+	else
+		gtk_text_buffer_insert(buf, &active, " ", -1);
+	GtkTextIter fwd = active;
+	gtk_text_iter_forward_char(&active);
+	gtk_text_buffer_delete(buf, &active, &fwd);
+}
+static gboolean mdnotebook_bufitem_checkmark_mark_unmap_delete_mark(GtkTextMark* location) {
+	GtkTextBuffer* buf = gtk_text_mark_get_buffer(location);
+	gtk_text_buffer_delete_mark(buf, GTK_TEXT_MARK(location));
+	return G_SOURCE_REMOVE;
+}
+static void mdnotebook_bufitem_checkmark_mark_unmap(GtkCheckButton* self, gpointer) {
+	GObject* location = g_object_get_data((GObject*)self, "location");
+	if (!location || !GTK_IS_TEXT_MARK(location))
+		return;
+
+	GSource* s = g_idle_source_new();
+	g_source_set_callback(s, G_SOURCE_FUNC(mdnotebook_bufitem_checkmark_mark_unmap_delete_mark), g_object_ref(location), NULL);
+	g_source_attach(s, g_main_context_default());
+
+	g_object_unref(location);
+	g_object_set_data((GObject*)self, "location", NULL);
 }
 static GtkWidget* mdnotebook_bufitem_checkmark_proxbufitem_render(MdNotebookProxBufItem* self, const GtkTextIter* begin, const GtkTextIter* end) {
 	MdNotebookView* view = mdnotebook_bufitem_get_textview(MDNOTEBOOK_BUFITEM(self));
-	gchar* str = gtk_text_iter_get_text(begin, end);
+	GtkTextBuffer* buf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
+	GtkTextMark* location = gtk_text_buffer_create_mark(buf, NULL, begin, TRUE);
 	GtkWidget* eq = gtk_check_button_new();
+	GtkGesture* ev = gtk_gesture_click_new();
+	gchar* str = gtk_text_iter_get_text(begin, end);
+
+	gtk_widget_set_cursor_from_name(eq, "default");
+	g_object_set_data((GObject*)eq, "location", location);
+	g_signal_connect(eq, "destroy", G_CALLBACK(mdnotebook_bufitem_checkmark_mark_unmap), NULL);
+
 	if (g_utf8_strlen(str, -1) >= 2) {
 		gtk_check_button_set_active(GTK_CHECK_BUTTON(eq), str[1] == 'X' || str[1] == 'x');
 	}
 	g_free(str);
-	g_signal_connect(eq, "toggled", G_CALLBACK(mdnotebook_bufitem_checkmark_toggled), view);
+
+	g_signal_connect(ev, "pressed", G_CALLBACK(mdnotebook_bufitem_checkmark_mark_pressed), eq);
+	g_signal_connect(ev, "released", G_CALLBACK(mdnotebook_bufitem_checkmark_mark_released), eq);
+	g_signal_connect(eq, "notify::active", G_CALLBACK(mdnotebook_bufitem_checkmark_mark_toggled), location);
+	gtk_widget_add_controller(eq, GTK_EVENT_CONTROLLER(ev));
 
 	return eq;
 }
