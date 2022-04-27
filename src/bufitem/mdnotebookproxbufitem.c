@@ -1,3 +1,4 @@
+#define MDNOTEBOOK_BUFFER_EXPOSE_INTERNAS
 #include "bufitem/mdnotebookproxbufitem.h"
 
 #define _ __attribute__((unused))
@@ -5,7 +6,7 @@
 typedef struct {
 	GtkTextMark* last_position;
 	GtkTextTag* invisible;
-	GtkTextTag* proximity;
+	gboolean* bufchangeptr;
 } MdNotebookProxBufItemPrivate;
 
 G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE (MdNotebookProxBufItem, mdnotebook_proxbufitem, MDNOTEBOOK_TYPE_BUFITEM)
@@ -43,15 +44,17 @@ static void mdnotebook_proxbufitem_bufitem_registered(MdNotebookBufItem* self, M
 		NULL);
 	priv->invisible = invisible;
 
-	GtkTextTag* proximity = gtk_text_tag_table_lookup(tagtable, "mdnb:prox:proximity");
+	/*GtkTextTag* proximity = gtk_text_tag_table_lookup(tagtable, "mdnb:prox:proximity");
 	if (proximity)
 		g_object_ref(proximity);
 	else
 		proximity = gtk_text_buffer_create_tag(buf, "mdnb:prox:proximity", NULL);
-	priv->proximity = proximity;
+	priv->proximity = proximity;*/
 
 	if (!mdnotebook_bufitem_get_textview(self))
 		g_critical("%s has no MdNotebook.View attached. This will cause issues.\n", g_type_name(G_OBJECT_TYPE(self)));
+	else
+		priv->bufchangeptr = mdnotebook_buffer_get_bufchange_ptr(mdnotebook_bufitem_get_buffer(self));
 }
 
 typedef struct {
@@ -62,14 +65,15 @@ static void mdnotebook_proxbufitem_render_widget(MdNotebookProxBufItem* self, co
 static gboolean mdnotebook_proxbufitem_bufitem_shift_iter_accomodate_anchor(GtkTextIter* i);
 static gboolean mdnotebook_proxbufitem_queue_child_anchor_cb(QueuedChildAnchor* queue) {
 	MdNotebookProxBufItemClass* class = MDNOTEBOOK_PROXBUFITEM_GET_CLASS(queue->item);
+	MdNotebookProxBufItemPrivate* priv = mdnotebook_proxbufitem_get_instance_private(queue->item);
 	GtkTextBuffer* buf = gtk_text_mark_get_buffer(queue->mark);
 	GtkTextIter start;
 	gtk_text_buffer_get_iter_at_mark(buf, &start, queue->mark);
 
 	if (!gtk_text_iter_get_child_anchor(&start)) {
-		mdnotebook_buffer_lock_bufchange(MDNOTEBOOK_BUFFER(buf));
+		*priv->bufchangeptr = TRUE;
 		gtk_text_buffer_create_child_anchor(buf, &start);
-		mdnotebook_buffer_unlock_bufchange(MDNOTEBOOK_BUFFER(buf));
+		*priv->bufchangeptr = FALSE;
 
 		gtk_text_buffer_get_iter_at_mark(buf, &start, queue->mark);
 		gtk_text_iter_forward_char(&start);
@@ -175,17 +179,14 @@ static gboolean mdnotebook_proxbufitem_bufitem_reverse_shift_iter_accomodate_anc
 // code.
 // Once the selection was remove, it automatally disconnects itself again.
 static void mdnotebook_proxbufitem_cursor_changed_remove_selection(GtkTextBuffer* buf, GParamSpec*, MdNotebookProxBufItem* self) {
-	MdNotebookProxBufItemClass* class = MDNOTEBOOK_PROXBUFITEM_GET_CLASS(self);
-
 	GtkTextIter ins,sb;
 	gtk_text_buffer_get_iter_at_mark(buf, &ins, gtk_text_buffer_get_insert(buf));
 	gtk_text_buffer_get_iter_at_mark(buf, &sb, gtk_text_buffer_get_selection_bound(buf));
-	GtkTextTag* tag = class->tag(self);
 
 	printf("(I%d|S%d)\n", gtk_text_iter_get_offset(&ins), gtk_text_iter_get_offset(&sb));
 
 	gtk_text_buffer_move_mark(buf, gtk_text_buffer_get_selection_bound(buf), &ins);
-unref:
+
 	g_signal_handlers_disconnect_by_func(buf, (gpointer)mdnotebook_proxbufitem_cursor_changed_remove_selection, self);
 	g_object_unref(self);
 }
@@ -230,10 +231,10 @@ static gboolean mdnotebook_proxbufitem_bufitem_cursor_changed_cb(MdNotebookProxB
 	// `<Shift>Home/End` doesn't work when behind an equation, etc.) Will
 	// definitively have to implement a better solution. Just don't know
 	// how yet ._.
-	if ((old_valid && new_valid && !(gtk_text_iter_in_range(&new_iter, &old_left, &old_right)))
+	/*if ((old_valid && new_valid && !(gtk_text_iter_in_range(&new_iter, &old_left, &old_right)))
 		 || (!old_valid && new_valid)) {
 		g_signal_connect(buf, "notify::has-selection", G_CALLBACK(mdnotebook_proxbufitem_cursor_changed_remove_selection), g_object_ref(self));
-	}
+	}*/
 
 	if (old_valid) {
 		if (new_valid) {
@@ -300,6 +301,80 @@ static void mdnotebook_proxbufitem_bufitem_cursor_changed(MdNotebookBufItem* sel
 	g_source_attach(s, g_main_context_default());
 }
 
+static void mdnotebook_proxbufitem_class_init(MdNotebookProxBufItemClass* class) {
+	GObjectClass* object_class = G_OBJECT_CLASS(class);
+	MdNotebookBufItemClass* bufitem_class= MDNOTEBOOK_BUFITEM_CLASS(class);
+
+	object_class->dispose = mdnotebook_proxbufitem_dispose;
+	bufitem_class->registered = mdnotebook_proxbufitem_bufitem_registered;
+	bufitem_class->cursor_changed = mdnotebook_proxbufitem_bufitem_cursor_changed;
+}
+
+static void mdnotebook_proxbufitem_init(MdNotebookProxBufItem* self) {
+	MdNotebookProxBufItemPrivate* priv = mdnotebook_proxbufitem_get_instance_private(self);
+	priv->last_position = NULL;
+	priv->bufchangeptr = NULL;
+}
+
+
+static gboolean mdnotebook_proxbufitem_queue_child_removal_cb(GtkTextMark* mark) {
+	GtkTextBuffer* buf = gtk_text_mark_get_buffer(mark);
+	GtkTextIter start,end;
+	gtk_text_buffer_get_iter_at_mark(buf, &start, mark);
+	end = start;
+	gtk_text_iter_forward_char(&end);
+
+	if (gtk_text_iter_get_child_anchor(&start))
+		gtk_text_buffer_delete(buf, &start, &end);
+
+	gtk_text_buffer_delete_mark(buf, mark);
+
+	printf("queud removal\n");
+
+	return G_SOURCE_REMOVE;
+}
+static void mdnotebook_proxbufitem_queue_child_removal(GtkTextMark* mark) {
+	GSource* s = g_idle_source_new();
+	g_source_set_callback(s, G_SOURCE_FUNC(mdnotebook_proxbufitem_queue_child_removal_cb), mark, NULL);
+	g_source_attach(s, g_main_context_default());
+}
+static void mdnotebook_proxbufitem_cleanup(MdNotebookProxBufItem* self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end) {
+	g_return_if_fail(MDNOTEBOOK_IS_PROXBUFITEM(self));
+	MdNotebookProxBufItemClass* class = MDNOTEBOOK_PROXBUFITEM_GET_CLASS(self);
+
+	GtkTextIter active = *start;
+	while (gtk_text_iter_forward_find_char(&active, mdnotebook_bufitem_check_char, (gpointer)0xFFFC, end)) {
+		GtkTextIter fwd = active;
+		gtk_text_iter_forward_char(&fwd);
+		if (gtk_text_iter_starts_tag(&fwd, class->tag(self)))
+			continue;
+
+		// if anchor is irrelevant to LaTeX -> continue
+		GtkTextChildAnchor* anch = gtk_text_iter_get_child_anchor(&active);
+		if (!anch)
+			continue;
+		guint num;
+		GtkWidget** widgets = gtk_text_child_anchor_get_widgets(anch, &num);
+		if (!num)
+			continue;
+		gboolean valid = FALSE;
+		for (guint i = 0; i<num; i++) {
+			valid = valid || class->test_widget(self, widgets[0]);
+		}
+		if (!valid)
+			continue;
+
+
+		GtkTextMark* mark = gtk_text_buffer_create_mark(GTK_TEXT_BUFFER(buffer), NULL, &active, TRUE);
+		mdnotebook_proxbufitem_queue_child_removal(mark);
+
+		// if there are (for whatever reason) multiple invalid nodes, the next one will be
+		// cleared once the first one has been removed (which will trigger this function again,
+		// and so forth).
+		//break;
+	}
+}
+
 typedef struct {
 	GtkTextMark* begin;
 	GtkTextMark* end;
@@ -328,7 +403,7 @@ static void mdnotebook_proxbufitem_render_outstanding(MarkerCombo* cmb, MdNotebo
 }
 
 
-static gboolean mdnotebook_proxbufitem_bufitem_buffer_changed_cb(ChangedQueue* queue) {
+static gboolean mdnotebook_proxbufitem_bufitem_items_changed_cb(ChangedQueue* queue) {
 	g_slist_foreach(queue->renderlist, CAST_GFUNC(mdnotebook_proxbufitem_render_outstanding), queue->self);
 	g_slist_free(g_steal_pointer(&queue->renderlist));
 	g_object_unref(queue->self);
@@ -336,20 +411,24 @@ static gboolean mdnotebook_proxbufitem_bufitem_buffer_changed_cb(ChangedQueue* q
 	return G_SOURCE_REMOVE;
 }
 
-void mdnotebook_proxbufitem_bufitem_buffer_changed(MdNotebookBufItem* self, MdNotebookBuffer* buffer, _ const GtkTextIter* start, _ const GtkTextIter* end) {
+void mdnotebook_proxbufitem_bufitem_items_changed(MdNotebookProxBufItem* self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end) {
+	g_return_if_fail(MDNOTEBOOK_IS_PROXBUFITEM(self));
 	MdNotebookProxBufItemClass* class = MDNOTEBOOK_PROXBUFITEM_GET_CLASS(self);
-	MdNotebookProxBufItemPrivate* priv = mdnotebook_proxbufitem_get_instance_private(MDNOTEBOOK_PROXBUFITEM(self));
 	GtkTextBuffer* buf = GTK_TEXT_BUFFER(buffer);
 
 	GtkTextTag* tag = class->tag(MDNOTEBOOK_PROXBUFITEM(self));
 	if (!tag)
 		return;
 
+	mdnotebook_proxbufitem_cleanup(self, buffer, start, end);
+
 	GSList* renderlist = g_slist_alloc();
 	GSList* active_renderlist_node = renderlist;
 
 	GtkTextIter i = *start,next;
 	while (gtk_text_iter_forward_to_tag_toggle(&i, tag)) {
+		if (gtk_text_iter_compare(&i, end) > 0) break;
+
 		next = i;
 		if (!gtk_text_iter_forward_to_tag_toggle(&next, tag)) next = *end;
 
@@ -378,21 +457,12 @@ next_tag:
 	ud->renderlist = renderlist;
 
 	GSource* s = g_idle_source_new();
-	g_source_set_callback(s, G_SOURCE_FUNC(mdnotebook_proxbufitem_bufitem_buffer_changed_cb), ud, NULL);
+	g_source_set_callback(s, G_SOURCE_FUNC(mdnotebook_proxbufitem_bufitem_items_changed_cb), ud, NULL);
 	g_source_attach(s, g_main_context_default());
 }
 
-static void mdnotebook_proxbufitem_class_init(MdNotebookProxBufItemClass* class) {
-	GObjectClass* object_class = G_OBJECT_CLASS(class);
-	MdNotebookBufItemClass* bufitem_class= MDNOTEBOOK_BUFITEM_CLASS(class);
-
-	object_class->dispose = mdnotebook_proxbufitem_dispose;
-	bufitem_class->registered = mdnotebook_proxbufitem_bufitem_registered;
-	bufitem_class->cursor_changed = mdnotebook_proxbufitem_bufitem_cursor_changed;
-	bufitem_class->buffer_changed = mdnotebook_proxbufitem_bufitem_buffer_changed;
-}
-
-static void mdnotebook_proxbufitem_init(MdNotebookProxBufItem* self) {
-	MdNotebookProxBufItemPrivate* priv = mdnotebook_proxbufitem_get_instance_private(self);
-	priv->last_position = NULL;
+gboolean mdnotebook_proxbufitem_test_iter_has_widget(const GtkTextIter* i) {
+	GtkTextIter active = *i;
+	gtk_text_iter_backward_char(&active);
+	return gtk_text_iter_get_char(&active) == _gtk_text_unknown_char;
 }

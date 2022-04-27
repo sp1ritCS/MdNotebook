@@ -17,9 +17,14 @@ struct _MdNotebookProxBufItemClass {
 	GtkTextTag* (*tag) (MdNotebookProxBufItem* self);
 	GtkWidget* (*render) (MdNotebookProxBufItem* self, const GtkTextIter* begin, const GtkTextIter* end);
 	void (*update) (MdNotebookProxBufItem* self, GtkWidget* render, const GtkTextIter* begin, const GtkTextIter* end);
+	gboolean (*test_widget) (MdNotebookProxBufItem* self, GtkWidget* widget);
 
 	gpointer padding[12];
 };
+
+void mdnotebook_proxbufitem_bufitem_items_changed(MdNotebookProxBufItem* self, MdNotebookBuffer* buffer, const GtkTextIter* start, const GtkTextIter* end);
+
+gboolean mdnotebook_proxbufitem_test_iter_has_widget(const GtkTextIter* i);
 
 G_END_DECLS
 
