@@ -1,5 +1,5 @@
 #include "mdnotebookbuffer.h"
-#define MDNOTEBOOK_EXPOSE_INTERNAS
+#define MDNOTEBOOK_BUFITEM_EXPOSE_INTERNAS
 #include "bufitem/mdnotebookbufitem.h"
 
 #define _ __attribute__((unused))
@@ -167,4 +167,12 @@ void mdnotebook_buffer_unlock_bufchange(MdNotebookBuffer* self) {
 	priv = mdnotebook_buffer_get_instance_private(self);
 
 	priv->locked_bufchange = FALSE;
+}
+
+gboolean* mdnotebook_buffer_get_bufchange_ptr(MdNotebookBuffer* self) {
+	MdNotebookBufferPrivate* priv;
+	g_return_val_if_fail(MDNOTEBOOK_IS_BUFFER(self), NULL);
+	priv = mdnotebook_buffer_get_instance_private(self);
+
+	return &priv->locked_bufchange;
 }

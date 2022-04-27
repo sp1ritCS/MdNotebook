@@ -20,6 +20,9 @@ GtkTextBuffer* mdnotebook_buffer_new(GtkTextTagTable* table);
 
 void mdnotebook_buffer_lock_bufchange(MdNotebookBuffer* self);
 void mdnotebook_buffer_unlock_bufchange(MdNotebookBuffer* self);
+#ifdef MDNOTEBOOK_BUFFER_EXPOSE_INTERNAS
+gboolean* mdnotebook_buffer_get_bufchange_ptr(MdNotebookBuffer* self);
+#endif
 
 G_END_DECLS
 

@@ -38,7 +38,7 @@ void mdnotebook_bufitem_on_insert(MdNotebookBufItem* self, MdNotebookBuffer* buf
 
 GtkTextTag* mdnotebook_bufitem_get_private_tag(MdNotebookBuffer* self);
 gboolean mdnotebook_bufitem_is_iter_in_private(MdNotebookBuffer* self, const GtkTextIter* it);
-#ifdef MDNOTEBOOK_EXPOSE_INTERNAS
+#ifdef MDNOTEBOOK_BUFITEM_EXPOSE_INTERNAS
 void mdnotebook_butitem_strip_private(MdNotebookBuffer* self, const GtkTextIter* start, const GtkTextIter* end);
 #endif
 gboolean mdnotebook_bufitem_check_char(gunichar ch, gpointer user_data);
