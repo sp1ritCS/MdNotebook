@@ -1,5 +1,6 @@
 #include "mdnotebookconfig.h"
 
+#define MDNOTEBOOK_VIEW_EXPOSE_INTERNAS
 #include "mdnotebookview.h"
 #include "mdnotebookbuffer.h"
 #include "mdnotebookbufferextra.h"
@@ -8,6 +9,10 @@
 #include "bufitem/mdnotebookbufitemdynblock.h"
 #include "bufitem/mdnotebookbufitemheading.h"
 #include "bufitem/mdnotebookbufitemtext.h"
+
+#include "booktool/mdnotebookbooktool.h"
+#include "booktool/mdnotebookbooktoolpen.h"
+#include "booktool/mdnotebookbooktooltext.h"
 
 #include "bufitem/mdnotebookbufitemcheckmark.h"
 
@@ -26,6 +31,9 @@ static GtkTextBuffer* mdnotebook_view_create_buffer(GtkTextView*) {
 typedef struct {
 	GdkModifierType modifier_keys;
 	guint latest_keyval;
+	GListStore* booktools;
+	MdNotebookBookTool* active_tool;
+	MdNotebookViewStrokeProxy stroke_proxy;
 } MdNotebookViewPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (MdNotebookView, mdnotebook_view, GTK_TYPE_TEXT_VIEW)
@@ -37,12 +45,38 @@ enum {
 
 static guint mdnotebook_view_signals[N_SIGNALS] = { 0, };
 
+static void mdnotebook_view_stroke_proxy_draw_fun(_ GtkDrawingArea* area, cairo_t* ctx, _ int width, _ int height, MdNotebookView* view) {
+	g_return_if_fail(MDNOTEBOOK_IS_VIEW(view));
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(view);
+
+	mdnotebook_stroke_render(priv->stroke_proxy.active, ctx);
+}
+
+static void mdnotebook_view_dispose(GObject* object) {
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(MDNOTEBOOK_VIEW(object));
+
+	g_clear_object(&priv->booktools);
+
+	if (priv->stroke_proxy.active)
+		g_free(g_steal_pointer(&priv->stroke_proxy.active));
+	if (priv->stroke_proxy.overlay)
+		g_object_unref(g_steal_pointer(&priv->stroke_proxy.overlay));
+
+	G_OBJECT_CLASS(mdnotebook_view_parent_class)->dispose(object);
+}
+
 static void mdnotebook_view_size_allocate(GtkWidget* widget, int width, int height, int baseline) {
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(MDNOTEBOOK_VIEW(widget));
+	GtkAllocation rect = { .x = 0, .y = 0, .width = width, .height = height };
+
 	GTK_WIDGET_CLASS(mdnotebook_view_parent_class)->size_allocate(widget, width, height, baseline);
 	g_signal_emit(widget, mdnotebook_view_signals[HORIZONTAL_RESIZE], 0, width);
+
+	gtk_widget_size_allocate(priv->stroke_proxy.overlay, &rect, baseline);
 }
 
 static void mdnotebook_view_class_init(MdNotebookViewClass* class) {
+	G_OBJECT_CLASS(class)->dispose = mdnotebook_view_dispose;
 	GTK_TEXT_VIEW_CLASS(class)->create_buffer = mdnotebook_view_create_buffer;
 	GTK_WIDGET_CLASS(class)->size_allocate = mdnotebook_view_size_allocate;
 
@@ -62,6 +96,59 @@ static gboolean mdnotebook_view_key_pressed(_ GtkEventController* ctl, guint key
 	return FALSE;
 }
 
+static void mdnotebook_view_booktool_gesture_start(MdNotebookView* self, GtkGesture* gest, gdouble x, gdouble y, gdouble pressure) {
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
+	if (mdnotebook_booktool_gesture_start(priv->active_tool, x, y, pressure)) {
+		gtk_gesture_set_state(gest, GTK_EVENT_SEQUENCE_CLAIMED);
+	}
+}
+static void mdnotebook_view_booktool_gesture_end(MdNotebookView* self, GtkGesture* gest, gdouble x, gdouble y, gdouble pressure) {
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
+	if (mdnotebook_booktool_gesture_end(priv->active_tool, x, y, pressure)) {
+		gtk_gesture_set_state(gest, GTK_EVENT_SEQUENCE_CLAIMED);
+	}
+}
+static void mdnotebook_view_booktool_gesture_move(MdNotebookView* self, GtkGesture* gest, gdouble x, gdouble y, gdouble pressure) {
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
+	if (mdnotebook_booktool_gesture_move(priv->active_tool, x, y, pressure)) {
+		gtk_gesture_set_state(gest, GTK_EVENT_SEQUENCE_CLAIMED);
+	}
+}
+
+
+static void mdnotebook_view_drag_begin(GtkGestureDrag* gest, gdouble x, gdouble y, MdNotebookView* self) {
+	mdnotebook_view_booktool_gesture_start(self, GTK_GESTURE(gest), x, y, 1.0);
+}
+static void mdnotebook_view_drag_end(GtkGestureDrag* gest, gdouble x_off, gdouble y_off, MdNotebookView* self) {
+	gdouble x,y;
+	gtk_gesture_drag_get_start_point(gest, &x, &y);
+	mdnotebook_view_booktool_gesture_end(self, GTK_GESTURE(gest), x + x_off, y + y_off, 1.0);
+}
+static void mdnotebook_view_drag_update(GtkGestureDrag* gest, gdouble x_off, gdouble y_off, MdNotebookView* self) {
+	gdouble x,y;
+	gtk_gesture_drag_get_start_point(gest, &x, &y);
+	mdnotebook_view_booktool_gesture_move(self, GTK_GESTURE(gest), x + x_off, y + y_off, 1.0);
+}
+static void mdnotebook_view_stylus_down(GtkGestureStylus* gest, gdouble x, gdouble y, MdNotebookView* self) {
+	gdouble pressure;
+		if (!gtk_gesture_stylus_get_axis(gest, GDK_AXIS_PRESSURE, &pressure))
+			pressure = 1.0;
+		mdnotebook_view_booktool_gesture_start(self, GTK_GESTURE(gest), x, y, pressure);
+}
+static void mdnotebook_view_stylus_up(GtkGestureStylus* gest, gdouble x, gdouble y, MdNotebookView* self) {
+	gdouble pressure;
+		if (!gtk_gesture_stylus_get_axis(gest, GDK_AXIS_PRESSURE, &pressure))
+			pressure = 1.0;
+		mdnotebook_view_booktool_gesture_end(self, GTK_GESTURE(gest), x, y, pressure);
+}
+static void mdnotebook_view_stylus_move(GtkGestureStylus* gest, gdouble x, gdouble y, MdNotebookView* self) {
+	gdouble pressure;
+		if (!gtk_gesture_stylus_get_axis(gest, GDK_AXIS_PRESSURE, &pressure))
+			pressure = 1.0;
+		mdnotebook_view_booktool_gesture_move(self, GTK_GESTURE(gest), x, y, pressure);
+}
+
+void mdnotebook_view_add_booktool(MdNotebookView* self, MdNotebookBookTool* tool);
 static void mdnotebook_view_init(MdNotebookView* self) {
 	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
 	MdNotebookBuffer* buffer = MDNOTEBOOK_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(self)));
@@ -90,6 +177,33 @@ static void mdnotebook_view_init(MdNotebookView* self) {
 	mdnotebook_buffer_add_bufitem(buffer, checkmark);
 	mdnotebook_buffer_add_bufitem(buffer, dynblock);
 	mdnotebook_buffer_add_bufitem(buffer, text);
+
+	priv->booktools = g_list_store_new(MDNOTEBOOK_TYPE_BOOKTOOL);
+	MdNotebookBookTool* texttool = mdnotebook_booktool_text_new(self);
+	MdNotebookBookTool* pentool = mdnotebook_booktool_pen_new(self);
+	priv->active_tool = pentool;
+	mdnotebook_view_add_booktool(self, texttool);
+	mdnotebook_view_add_booktool(self, pentool);
+
+	GtkGesture* stylusctl = gtk_gesture_stylus_new();
+	g_signal_connect(stylusctl, "down", G_CALLBACK(mdnotebook_view_stylus_down), self);
+	g_signal_connect(stylusctl, "up", G_CALLBACK(mdnotebook_view_stylus_up), self);
+	g_signal_connect(stylusctl, "motion", G_CALLBACK(mdnotebook_view_stylus_move), self);
+	gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(stylusctl));
+
+	GtkGesture* dragctl = gtk_gesture_drag_new();
+	g_signal_connect(dragctl, "drag-begin", G_CALLBACK(mdnotebook_view_drag_begin), self);
+	g_signal_connect(dragctl, "drag-end", G_CALLBACK(mdnotebook_view_drag_end), self);
+	g_signal_connect(dragctl, "drag-update", G_CALLBACK(mdnotebook_view_drag_update), self);
+	gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(dragctl), GTK_PHASE_CAPTURE);
+	gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(dragctl));
+
+	// BEGIN Stroke Proxy
+	priv->stroke_proxy.overlay = gtk_drawing_area_new();
+	gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(priv->stroke_proxy.overlay), (GtkDrawingAreaDrawFunc)mdnotebook_view_stroke_proxy_draw_fun, self, NULL);
+	gtk_text_view_add_overlay(GTK_TEXT_VIEW(self), priv->stroke_proxy.overlay, 0, 0);
+
+	priv->stroke_proxy.active = mdnotebook_stroke_new(0xff000000);
 }
 
 GtkWidget* mdnotebook_view_new(void) {
@@ -115,4 +229,68 @@ guint mdnotebook_view_get_latest_keyval(MdNotebookView* self) {
 	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
 
 	return priv->latest_keyval;
+}
+
+static gboolean mdnotebook_view_cmp_booktool_type(gconstpointer lhs, gconstpointer rhs) {
+	return G_OBJECT_TYPE(lhs) == G_OBJECT_TYPE(rhs);
+}
+void mdnotebook_view_add_booktool(MdNotebookView* self, MdNotebookBookTool* tool) {
+	MdNotebookViewPrivate* priv;
+	g_return_if_fail(MDNOTEBOOK_IS_VIEW(self));
+	priv = mdnotebook_view_get_instance_private(self);
+
+	if (g_list_store_find_with_equal_func(priv->booktools, tool, mdnotebook_view_cmp_booktool_type, NULL)) {
+		g_warning("%s is already registered in the MdNotebook.View\n", g_type_name(G_OBJECT_TYPE(tool)));
+	} else {
+		g_list_store_append(priv->booktools, tool);
+		mdnotebook_booktool_registered(tool, self);
+	}
+
+	g_object_unref(tool);
+}
+
+gboolean mdnotebook_view_select_tool(MdNotebookView* self, MdNotebookBookTool* tool) {
+	MdNotebookViewPrivate* priv;
+	g_return_val_if_fail(MDNOTEBOOK_IS_VIEW(self), FALSE);
+	priv = mdnotebook_view_get_instance_private(self);
+
+	if (g_list_store_find(priv->booktools, tool, NULL)) {
+		priv->active_tool = tool;
+		return TRUE;
+	} else {
+		g_warning("Tried to selection unregistered tool %s\n", g_type_name(G_OBJECT_TYPE(tool)));
+		return FALSE;
+	}
+}
+static gboolean mdnotebook_view_cmp_booktool_type_t(gconstpointer lhs, gconstpointer rhs) {
+	return G_OBJECT_TYPE(lhs) == *(GType*)rhs;
+}
+gboolean mdnotebook_view_select_tool_by_type(MdNotebookView* self, GType* tool) {
+	MdNotebookViewPrivate* priv;
+	g_return_val_if_fail(MDNOTEBOOK_IS_VIEW(self), FALSE);
+	priv = mdnotebook_view_get_instance_private(self);
+
+	guint position;
+	if (g_list_store_find_with_equal_func(priv->booktools, tool, mdnotebook_view_cmp_booktool_type_t, &position)) {
+		priv->active_tool = MDNOTEBOOK_BOOKTOOL(g_list_model_get_object(G_LIST_MODEL(priv->booktools), position));
+		return TRUE;
+	} else {
+		g_warning("Tried to selection unregistered tool %s\n", g_type_name(*tool));
+		return FALSE;
+	}
+}
+
+GListModel* mdnotebook_view_get_tools(MdNotebookView* self) {
+	MdNotebookViewPrivate* priv;
+	g_return_val_if_fail(MDNOTEBOOK_IS_VIEW(self), NULL);
+	priv = mdnotebook_view_get_instance_private(self);
+
+	return G_LIST_MODEL(priv->booktools);
+}
+
+MdNotebookViewStrokeProxy* mdnotebook_view_get_stroke_proxy(MdNotebookView* self) {
+	g_return_val_if_fail(MDNOTEBOOK_IS_VIEW(self), NULL);
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
+
+	return &priv->stroke_proxy;
 }

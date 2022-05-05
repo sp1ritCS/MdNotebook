@@ -3,6 +3,10 @@
 
 #include <mdnotebookconfig.h>
 
+#include <booktool/mdnotebookbooktool.h>
+#include <booktool/mdnotebookbooktoolpen.h>
+#include <booktool/mdnotebookbooktooltext.h>
+
 #ifdef MDNOTEBOOK_HAVE_LATEX
 #include <bufitem/latex/mdnotebookbufitemlatex.h>
 #include <bufitem/latex/mdnotebooklatexequation.h>
@@ -22,7 +26,10 @@
 #include <mdnotebookbuffer.h>
 #include <mdnotebookbufferextra.h>
 #include <mdnotebookbufwidget.h>
+#include <mdnotebookdrawing.h>
+#include <mdnotebooktoolbar.h>
 #include <mdnotebookview.h>
+#include <mdnotebookviewextra.h>
 #include <mdnotebookzoomview.h>
 
 #endif // __GTKMDNOTEBOOK_H__

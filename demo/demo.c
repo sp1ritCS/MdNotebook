@@ -2,7 +2,7 @@
 #include <mdnotebook.h>
 
 static void activate(GtkApplication* app, gpointer) {
-	GtkWidget *window,*shell,*scroll,*view,*bufwgt,*innerwgt,*btmbar,*zoom_slider;
+	GtkWidget *window,*shell,*scroll,*view,*bufwgt,*innerwgt,*btmbar,*toolbar,*zoom_slider;
 	MdNotebookBuffer* buf;
 	GtkTextIter iter;
 	GtkTextChildAnchor* anch;
@@ -25,7 +25,12 @@ static void activate(GtkApplication* app, gpointer) {
 	gtk_text_buffer_insert(GTK_TEXT_BUFFER(buf), &iter, "Hello $\\LaTeX$!\n  - MdNotebook Demo", -1);
 
 	btmbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-	gtk_widget_set_halign(btmbar, GTK_ALIGN_END);
+	gtk_widget_set_hexpand(btmbar, TRUE);
+
+	toolbar = mdnotebook_toolbar_new_from_view(MDNOTEBOOK_VIEW(mdnotebook_zoomview_get_textview(MDNOTEBOOK_ZOOMVIEW(view))));
+	gtk_widget_set_valign(toolbar, GTK_ALIGN_CENTER);
+	gtk_widget_set_hexpand(toolbar, TRUE);
+	gtk_box_append(GTK_BOX(btmbar), toolbar);
 
 	zoom_adj = gtk_adjustment_new(1., 0., 5., 1., 0., 0.);
 	zoom_slider = gtk_scale_new(GTK_ORIENTATION_HORIZONTAL, zoom_adj);

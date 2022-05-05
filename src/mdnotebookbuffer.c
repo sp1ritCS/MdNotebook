@@ -109,8 +109,11 @@ static void mdnotebook_buffer_dispose(GObject* object) {
 	MdNotebookBuffer* self = MDNOTEBOOK_BUFFER(object);
 	MdNotebookBufferPrivate* priv = mdnotebook_buffer_get_instance_private(self);
 
-	g_object_unref(priv->bufitems);
-	g_hash_table_unref(priv->baseline_tags);
+	g_clear_object(&priv->bufitems);
+	if (priv->baseline_tags)
+		g_hash_table_unref(g_steal_pointer(&priv->baseline_tags));
+
+	G_OBJECT_CLASS(mdnotebook_buffer_parent_class)->dispose(object);
 }
 
 static void mdnotebook_buffer_class_init(MdNotebookBufferClass* class) {

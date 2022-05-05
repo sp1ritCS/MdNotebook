@@ -5,8 +5,16 @@
 #include <gtk/gtk.h>
 
 #include <mdnotebookbuffer.h>
+#include <mdnotebookdrawing.h>
 
 G_BEGIN_DECLS
+
+#ifdef MDNOTEBOOK_VIEW_EXPOSE_INTERNAS
+typedef struct {
+	GtkWidget* overlay;
+	MdNotebookStroke* active;
+} MdNotebookViewStrokeProxy;
+#endif // MDNOTEBOOK_VIEW_EXPOSE_INTERNAS
 
 #define MDNOTEBOOK_TYPE_VIEW (mdnotebook_view_get_type())
 G_DECLARE_DERIVABLE_TYPE (MdNotebookView, mdnotebook_view, MDNOTEBOOK, VIEW, GtkTextView)
@@ -22,6 +30,13 @@ GtkWidget* mdnotebook_view_new_with_buffer(MdNotebookBuffer* buffer);
 
 GdkModifierType mdnotebook_view_get_modifier_keys(MdNotebookView* self);
 guint mdnotebook_view_get_latest_keyval(MdNotebookView* self);
+
+gboolean mdnotebook_view_select_tool_by_type(MdNotebookView* self, GType* tool);
+GListModel* mdnotebook_view_get_tools(MdNotebookView* self);
+
+#ifdef MDNOTEBOOK_VIEW_EXPOSE_INTERNAS
+MdNotebookViewStrokeProxy* mdnotebook_view_get_stroke_proxy(MdNotebookView* self);
+#endif // MDNOTEBOOK_VIEW_EXPOSE_INTERNAS
 
 G_END_DECLS
 

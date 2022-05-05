@@ -3,8 +3,15 @@ conf_data = configuration_data()
 src = [
   'mdnotebookbuffer.c',
   'mdnotebookbufwidget.c',
+  'mdnotebookdrawing.c',
+  'mdnotebooktoolbar.c',
   'mdnotebookview.c',
   'mdnotebookzoomview.c',
+  [
+    'booktool/mdnotebookbooktool.c',
+    'booktool/mdnotebookbooktoolpen.c',
+    'booktool/mdnotebookbooktooltext.c'
+  ],
   [
     'bufitem/mdnotebookbufitem.c',
     'bufitem/mdnotebookbufitemcodeblock.c',
@@ -22,8 +29,16 @@ headers = [
   'mdnotebookbuffer.h',
   'mdnotebookbufferextra.h',
   'mdnotebookbufwidget.h',
+  'mdnotebookdrawing.h',
+  'mdnotebooktoolbar.h',
   'mdnotebookview.h',
+  'mdnotebookviewextra.h',
   'mdnotebookzoomview.h',
+  [
+    'booktool/mdnotebookbooktool.h',
+    'booktool/mdnotebookbooktoolpen.h',
+    'booktool/mdnotebookbooktooltext.h'
+  ],
   [
     'bufitem/mdnotebookbufitem.h',
     'bufitem/mdnotebookbufitemcodeblock.h',
