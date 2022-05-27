@@ -54,7 +54,7 @@ static void mdnotebook_view_stroke_proxy_draw_fun(_ GtkDrawingArea* area, cairo_
 	g_return_if_fail(MDNOTEBOOK_IS_VIEW(view));
 	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(view);
 
-	mdnotebook_stroke_render(priv->stroke_proxy.active, ctx);
+	mdnotebook_stroke_render(priv->stroke_proxy.active, ctx, FALSE);
 
 	mdnotebook_booktool_render_pointer_texture(priv->active_tool, ctx, priv->pointer_pos.x, priv->pointer_pos.y);
 }

@@ -25,7 +25,7 @@ MdNotebookStroke* mdnotebook_stroke_new(guint32 color);
 void mdnotebook_stroke_append_node(MdNotebookStroke* stroke, gdouble x, gdouble y, gdouble pressure);
 void mdnotebook_stroke_force_min_xy(MdNotebookStroke* stroke, gdouble x, gdouble y);
 gboolean mdnotebook_stroke_get_bbox(MdNotebookStroke* stroke, gdouble* x0, gdouble* x1, gdouble* y0, gdouble* y1);
-void mdnotebook_stroke_render(MdNotebookStroke* stroke, cairo_t* ctx);
+void mdnotebook_stroke_render(MdNotebookStroke* stroke, cairo_t* ctx, gboolean debug_mode);
 void mdnotebook_stroke_set_color(MdNotebookStroke* stroke, guint32 color);
 
 
@@ -41,6 +41,9 @@ struct _MdNotebookBoundDrawingClass {
 GtkWidget* mdnotebook_bounddrawing_new(void);
 
 MdNotebookBoundDrawing* mdnotebook_bounddrawing_try_upcast(GtkWidget* w);
+
+gboolean mdnotebook_bounddrawing_get_debug(MdNotebookBoundDrawing* self);
+void mdnotebook_bounddrawing_set_debug(MdNotebookBoundDrawing* self, gboolean debug);
 
 gboolean mdnotebook_bounddrawing_get_size(MdNotebookBoundDrawing* self, gint* width, gint* height);
 

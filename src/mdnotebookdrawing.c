@@ -66,7 +66,7 @@ gboolean mdnotebook_stroke_get_bbox(MdNotebookStroke* stroke, gdouble* x0, gdoub
 	return TRUE;
 }
 
-void mdnotebook_stroke_render(MdNotebookStroke* stroke, cairo_t* ctx) {
+void mdnotebook_stroke_render(MdNotebookStroke* stroke, cairo_t* ctx, gboolean debug_mode) {
 	if (!stroke)
 		return;
 
@@ -85,6 +85,26 @@ void mdnotebook_stroke_render(MdNotebookStroke* stroke, cairo_t* ctx) {
 		cairo_set_line_width(ctx, prevnode.p * MDNOTEBOOK_STROKE_SIZE_MULTIPLIER);
 		cairo_stroke(ctx);
 	}
+
+	if (debug_mode)
+		for (gsize i = 1; i < stroke->num_nodes; i++) {
+			MdNotebookStrokeNode node = stroke->nodes[i];
+			MdNotebookStrokeNode prevnode = stroke->nodes[i-1];
+
+			cairo_set_line_width(ctx, 0.5);
+			cairo_set_source_rgba(ctx, 0.301960784, 0.760784314, 0.941176471, 1.0);
+			cairo_move_to(ctx, prevnode.x, prevnode.y);
+			cairo_line_to(ctx, node.x, node.y);
+			cairo_status(ctx);
+
+			cairo_set_line_width(ctx, 0.75);
+			cairo_set_source_rgba(ctx, 0.937254902, 0.301960784, 0.941176471, 1.0);
+			cairo_move_to(ctx, node.x - 2.5, node.y - 2.5);
+			cairo_line_to(ctx, node.x + 2.5, node.y + 2.5);
+			cairo_move_to(ctx, node.x + 2.5, node.y - 2.5);
+			cairo_line_to(ctx, node.x - 2.5, node.y + 2.5);
+			cairo_stroke(ctx);
+		}
 }
 
 void mdnotebook_stroke_set_color(MdNotebookStroke* stroke, guint32 color) {
@@ -99,10 +119,42 @@ typedef struct {
 	gint width, height;
 	GSList* strokes;
 	GSList* stroke_head;
+
+	gboolean debug;
 } MdNotebookBoundDrawingPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE (MdNotebookBoundDrawing, mdnotebook_bounddrawing, GTK_TYPE_WIDGET)
 
+enum {
+	PROP_DEBUG = 1,
+	N_PROPERTIES
+};
+
+static GParamSpec* obj_properties[N_PROPERTIES] = { NULL, };
+
+static void mdnotebook_bounddrawing_object_get_property(GObject* object, guint prop_id, GValue* value, GParamSpec* pspec) {
+	MdNotebookBoundDrawing* self = MDNOTEBOOK_BOUNDDRAWING(object);
+
+	switch (prop_id) {
+		case PROP_DEBUG:
+			g_value_set_boolean(value, mdnotebook_bounddrawing_get_debug(self));
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+	}
+
+}
+static void mdnotebook_bounddrawing_object_set_property(GObject* object, guint prop_id, const GValue* value, GParamSpec* pspec) {
+	MdNotebookBoundDrawing* self = MDNOTEBOOK_BOUNDDRAWING(object);
+
+	switch (prop_id) {
+		case PROP_DEBUG:
+			mdnotebook_bounddrawing_set_debug(self, g_value_get_boolean(value));
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+	}
+}
 static void mdnotebook_bounddrawing_object_dispose(GObject* object) {
 	MdNotebookBoundDrawingPrivate* priv = mdnotebook_bounddrawing_get_instance_private(MDNOTEBOOK_BOUNDDRAWING(object));
 
@@ -129,10 +181,14 @@ static void mdnotebook_bounddrawing_widget_measure(GtkWidget* widget, GtkOrienta
 	}
 }
 
-static void mdnotebook_bounddrawing_stroke_iter(MdNotebookStroke* stroke, cairo_t* ctx) {
+typedef struct {
+	MdNotebookBoundDrawing* self;
+	cairo_t* ctx;
+} MdNotebookBoundDrawingStrokeIterUd;
+static void mdnotebook_bounddrawing_stroke_iter(MdNotebookStroke* stroke, MdNotebookBoundDrawingStrokeIterUd* ud) {
 	if (!stroke)
 		return;
-	mdnotebook_stroke_render(stroke, ctx);
+	mdnotebook_stroke_render(stroke, ud->ctx, mdnotebook_bounddrawing_get_debug(ud->self));
 }
 static void mdnotebook_bounddrawing_widget_snapshot(GtkWidget* widget, GtkSnapshot* snapshot) {
 	MdNotebookBoundDrawingPrivate* priv = mdnotebook_bounddrawing_get_instance_private(MDNOTEBOOK_BOUNDDRAWING(widget));
@@ -142,8 +198,8 @@ static void mdnotebook_bounddrawing_widget_snapshot(GtkWidget* widget, GtkSnapsh
 		height = gtk_widget_get_allocated_height(widget);
 
 	cairo_t* ctx = gtk_snapshot_append_cairo(snapshot, &GRAPHENE_RECT_INIT(0, 0, width, height));
-
-	g_slist_foreach(priv->strokes, (GFunc)mdnotebook_bounddrawing_stroke_iter, ctx);
+	MdNotebookBoundDrawingStrokeIterUd stroke_iter_ud = { .self = MDNOTEBOOK_BOUNDDRAWING(widget), .ctx = ctx };
+	g_slist_foreach(priv->strokes, (GFunc)mdnotebook_bounddrawing_stroke_iter, &stroke_iter_ud);
 
 	cairo_destroy(ctx);
 }
@@ -152,11 +208,16 @@ static void mdnotebook_bounddrawing_class_init(MdNotebookBoundDrawingClass* clas
 	GObjectClass* object_class = G_OBJECT_CLASS(class);
 	GtkWidgetClass* widget_class = GTK_WIDGET_CLASS(class);
 
+	object_class->get_property = mdnotebook_bounddrawing_object_get_property;
+	object_class->set_property = mdnotebook_bounddrawing_object_set_property;
 	object_class->dispose = mdnotebook_bounddrawing_object_dispose;
 
 	widget_class->get_request_mode = mdnotebook_bounddrawing_widget_get_request_mode;
 	widget_class->measure = mdnotebook_bounddrawing_widget_measure;
 	widget_class->snapshot = mdnotebook_bounddrawing_widget_snapshot;
+
+	obj_properties[PROP_DEBUG] = g_param_spec_boolean("debug", "Debug", "Render debug nodes", FALSE, G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_EXPLICIT_NOTIFY);
+	g_object_class_install_properties(object_class, N_PROPERTIES, obj_properties);
 }
 
 static void mdnotebook_bounddrawing_init(MdNotebookBoundDrawing* self) {
@@ -166,6 +227,8 @@ static void mdnotebook_bounddrawing_init(MdNotebookBoundDrawing* self) {
 	priv->height = -1;
 	priv->strokes = g_slist_alloc();
 	priv->stroke_head = priv->strokes;
+
+	priv->debug = FALSE;
 }
 
 GtkWidget* mdnotebook_bounddrawing_new() {
@@ -177,6 +240,24 @@ MdNotebookBoundDrawing* mdnotebook_bounddrawing_try_upcast(GtkWidget* w) {
 		return (MdNotebookBoundDrawing*)w;
 	else
 		return NULL;
+}
+
+gboolean mdnotebook_bounddrawing_get_debug(MdNotebookBoundDrawing* self) {
+	g_return_val_if_fail(MDNOTEBOOK_IS_BOUNDDRAWING(self), FALSE);
+	MdNotebookBoundDrawingPrivate* priv = mdnotebook_bounddrawing_get_instance_private(self);
+
+	return priv->debug;
+}
+void mdnotebook_bounddrawing_set_debug(MdNotebookBoundDrawing* self, gboolean debug) {
+	g_return_if_fail(MDNOTEBOOK_IS_BOUNDDRAWING(self));
+	MdNotebookBoundDrawingPrivate* priv = mdnotebook_bounddrawing_get_instance_private(self);
+
+	if (priv->debug == debug)
+		return;
+	priv->debug = debug;
+	gtk_widget_queue_draw(GTK_WIDGET(self));
+
+	g_object_notify_by_pspec(G_OBJECT(self), obj_properties[PROP_DEBUG]);
 }
 
 gboolean mdnotebook_bounddrawing_get_size(MdNotebookBoundDrawing* self, gint* width, gint* height) {
