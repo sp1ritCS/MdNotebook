@@ -62,14 +62,13 @@ static gboolean insert_handle_fwd(gunichar c, gpointer clause) {
 	}
 }
 
-static void mdnotebook_bufitem_dynblock_bufitem_on_insert(_ MdNotebookBufItem* iface, MdNotebookBuffer* self, GtkTextMark* location, gchar* text, gint) {
+static void mdnotebook_bufitem_dynblock_bufitem_on_insert(MdNotebookBufItem* iface, MdNotebookBuffer* self, GtkTextMark* location, gchar* text, gint) {
 	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
 	GtkTextIter iter;
 	gtk_text_buffer_get_iter_at_mark(buf, &iter, location);
 	if(g_strcmp0(text, "\n") == 0) {
 		if (mdnotebook_bufitem_is_iter_in_private(self, &iter)) return;
-		// TODO: implement reference to MdNotebook.View
-		//if(self->modifier_keys & GDK_SHIFT_MASK) return;
+		if(mdnotebook_view_get_modifier_keys(mdnotebook_bufitem_get_textview(MDNOTEBOOK_BUFITEM(iface))) & GDK_SHIFT_MASK) return;
 		if(!gtk_text_iter_ends_line(&iter)) return;
 
 		/* extract previous line's first word and indentation preceding it */
@@ -135,6 +134,6 @@ static void mdnotebook_bufitem_dynblock_class_init(_ MdNotebookBufItemDynBlockCl
 
 static void mdnotebook_bufitem_dynblock_init(_ MdNotebookBufItemDynBlock* self) {}
 
-MdNotebookBufItem* mdnotebook_bufitem_dynblock_new() {
-	return g_object_new(MDNOTEBOOK_TYPE_BUFITEM_DYNBLOCK, NULL);
+MdNotebookBufItem* mdnotebook_bufitem_dynblock_new(MdNotebookView* textview) {
+	return g_object_new(MDNOTEBOOK_TYPE_BUFITEM_DYNBLOCK, "textview", textview, NULL);
 }

@@ -15,7 +15,7 @@ struct _MdNotebookBufItemCodeblockClass {
 	MdNotebookBufItemClass parent_class;
 };
 
-MdNotebookBufItem* mdnotebook_bufitem_codeblock_new();
+MdNotebookBufItem* mdnotebook_bufitem_codeblock_new(MdNotebookView* view);
 
 G_END_DECLS
 

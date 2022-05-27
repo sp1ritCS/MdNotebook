@@ -160,7 +160,7 @@ static void mdnotebook_view_init(MdNotebookView* self) {
 	g_signal_connect(keyctl, "key-pressed", G_CALLBACK(mdnotebook_view_key_pressed), self);
 	gtk_widget_add_controller(GTK_WIDGET(self), keyctl);
 
-	MdNotebookBufItem* codeblock = mdnotebook_bufitem_codeblock_new();
+	MdNotebookBufItem* codeblock = mdnotebook_bufitem_codeblock_new(self);
 	MdNotebookBufItem* title = mdnotebook_bufitem_heading_new();
 
 #ifdef MDNOTEBOOK_HAVE_LATEX
@@ -170,7 +170,7 @@ static void mdnotebook_view_init(MdNotebookView* self) {
 #endif
 
 	MdNotebookBufItem* checkmark = mdnotebook_bufitem_checkmark_new(self);
-	MdNotebookBufItem* dynblock = mdnotebook_bufitem_dynblock_new();
+	MdNotebookBufItem* dynblock = mdnotebook_bufitem_dynblock_new(self);
 	MdNotebookBufItem* text = mdnotebook_bufitem_text_new();
 	mdnotebook_buffer_add_bufitem(buffer, codeblock);
 	mdnotebook_buffer_add_bufitem(buffer, title);

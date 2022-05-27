@@ -55,7 +55,7 @@ static void mdnotebook_bufitem_codeblock_bufitem_buffer_changed(_ MdNotebookBufI
 	}
 }
 
-static void mdnotebook_bufitem_codeblock_bufitem_on_insert(_ MdNotebookBufItem* iface, MdNotebookBuffer* self, GtkTextMark* location, gchar* text, gint) {
+static void mdnotebook_bufitem_codeblock_bufitem_on_insert(MdNotebookBufItem* iface, MdNotebookBuffer* self, GtkTextMark* location, gchar* text, gint) {
 	GtkTextBuffer* buf = GTK_TEXT_BUFFER(self);
 	GtkTextIter iter;
 	gtk_text_buffer_get_iter_at_mark(buf, &iter, location);
@@ -65,8 +65,7 @@ static void mdnotebook_bufitem_codeblock_bufitem_on_insert(_ MdNotebookBufItem* 
 		GtkTextTag* codeblocktag;
 
 		if (mdnotebook_bufitem_is_iter_in_private(self, &iter)) return;
-		// TODO: implement reference to MdNotebook.View
-		//if(self->modifier_keys & GDK_SHIFT_MASK) return;
+		if(mdnotebook_view_get_modifier_keys(mdnotebook_bufitem_get_textview(MDNOTEBOOK_BUFITEM(iface))) & GDK_SHIFT_MASK) return;
 		if(!gtk_text_iter_ends_line(&iter)) return;
 
 		gtk_text_iter_backward_line(&iter);
@@ -105,6 +104,6 @@ static void mdnotebook_bufitem_codeblock_class_init(MdNotebookBufItemCodeblockCl
 
 static void mdnotebook_bufitem_codeblock_init(_ MdNotebookBufItemCodeblock* self) {}
 
-MdNotebookBufItem* mdnotebook_bufitem_codeblock_new() {
-	return g_object_new(MDNOTEBOOK_TYPE_BUFITEM_CODEBLOCK, NULL);
+MdNotebookBufItem* mdnotebook_bufitem_codeblock_new(MdNotebookView* textview) {
+	return g_object_new(MDNOTEBOOK_TYPE_BUFITEM_CODEBLOCK, "textview", textview, NULL);
 }

@@ -15,7 +15,7 @@ struct _MdNotebookBufItemDynBlockClass {
 	MdNotebookBufItemClass parent_class;
 };
 
-MdNotebookBufItem* mdnotebook_bufitem_dynblock_new();
+MdNotebookBufItem* mdnotebook_bufitem_dynblock_new(MdNotebookView* textview);
 
 G_END_DECLS
 
