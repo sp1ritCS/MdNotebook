@@ -23,6 +23,7 @@ struct _MdNotebookBookToolClass {
 	gboolean (*gesture_start) (MdNotebookBookTool* self, gdouble x, gdouble y, gdouble pressure);
 	gboolean (*gesture_end) (MdNotebookBookTool* self, gdouble x, gdouble y, gdouble pressure);
 	gboolean (*gesture_move) (MdNotebookBookTool* self, gdouble x, gdouble y, gdouble pressure);
+	void (*render_pointer_texture) (MdNotebookBookTool* self, cairo_t* ctx, gdouble x, gdouble y);
 
 	gpointer padding[12];
 };
@@ -35,6 +36,7 @@ void mdnotebook_booktool_deactivated(MdNotebookBookTool* self, MdNotebookView* v
 gboolean mdnotebook_booktool_gesture_start(MdNotebookBookTool* self, gdouble x, gdouble y, gdouble pressure);
 gboolean mdnotebook_booktool_gesture_end(MdNotebookBookTool* self, gdouble x, gdouble y, gdouble pressure);
 gboolean mdnotebook_booktool_gesture_move(MdNotebookBookTool* self, gdouble x, gdouble y, gdouble pressure);
+void mdnotebook_booktool_render_pointer_texture(MdNotebookBookTool* self, cairo_t* ctx, gdouble x, gdouble y);
 
 MdNotebookView* mdnotebook_booktool_get_textview(MdNotebookBookTool* self);
 void mdnotebook_booktool_set_textview(MdNotebookBookTool* self, MdNotebookView* view);

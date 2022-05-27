@@ -27,12 +27,17 @@ static GtkTextBuffer* mdnotebook_view_create_buffer(GtkTextView*) {
 	return mdnotebook_buffer_new(NULL);
 }
 
-
+typedef struct {
+	gdouble x;
+	gdouble y;
+} MdNotebookViewPointerPosition;
 typedef struct {
 	GdkModifierType modifier_keys;
 	guint latest_keyval;
 	GListStore* booktools;
 	MdNotebookBookTool* active_tool;
+	GtkGesture* stylus_gesture;
+	MdNotebookViewPointerPosition pointer_pos;
 	MdNotebookViewStrokeProxy stroke_proxy;
 } MdNotebookViewPrivate;
 
@@ -50,6 +55,8 @@ static void mdnotebook_view_stroke_proxy_draw_fun(_ GtkDrawingArea* area, cairo_
 	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(view);
 
 	mdnotebook_stroke_render(priv->stroke_proxy.active, ctx);
+
+	mdnotebook_booktool_render_pointer_texture(priv->active_tool, ctx, priv->pointer_pos.x, priv->pointer_pos.y);
 }
 
 static void mdnotebook_view_dispose(GObject* object) {
@@ -94,6 +101,13 @@ static gboolean mdnotebook_view_key_pressed(_ GtkEventController* ctl, guint key
 	priv->latest_keyval = keyval;
 
 	return FALSE;
+}
+
+static void mdnotebook_view_pointer_motion(_ GtkEventControllerMotion* ctl, gdouble x, gdouble y, MdNotebookView* self) {
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
+
+	priv->pointer_pos.x = x;
+	priv->pointer_pos.y = y;
 }
 
 static void mdnotebook_view_booktool_gesture_start(MdNotebookView* self, GtkGesture* gest, gdouble x, gdouble y, gdouble pressure) {
@@ -185,11 +199,18 @@ static void mdnotebook_view_init(MdNotebookView* self) {
 	mdnotebook_view_add_booktool(self, texttool);
 	mdnotebook_view_add_booktool(self, pentool);
 
+	GtkEventController* motionctl = gtk_event_controller_motion_new();
+	g_signal_connect(motionctl, "motion", G_CALLBACK(mdnotebook_view_pointer_motion), self);
+	gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(motionctl), GTK_PHASE_CAPTURE);
+	gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(motionctl));
+
 	GtkGesture* stylusctl = gtk_gesture_stylus_new();
 	g_signal_connect(stylusctl, "down", G_CALLBACK(mdnotebook_view_stylus_down), self);
 	g_signal_connect(stylusctl, "up", G_CALLBACK(mdnotebook_view_stylus_up), self);
 	g_signal_connect(stylusctl, "motion", G_CALLBACK(mdnotebook_view_stylus_move), self);
 	gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(stylusctl));
+
+	priv->stylus_gesture = stylusctl;
 
 	GtkGesture* dragctl = gtk_gesture_drag_new();
 	g_signal_connect(dragctl, "drag-begin", G_CALLBACK(mdnotebook_view_drag_begin), self);
@@ -198,10 +219,15 @@ static void mdnotebook_view_init(MdNotebookView* self) {
 	gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(dragctl), GTK_PHASE_CAPTURE);
 	gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(dragctl));
 
+	priv->pointer_pos.x = -1;
+	priv->pointer_pos.y = -1;
+
 	// BEGIN Stroke Proxy
 	priv->stroke_proxy.overlay = gtk_drawing_area_new();
 	gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(priv->stroke_proxy.overlay), (GtkDrawingAreaDrawFunc)mdnotebook_view_stroke_proxy_draw_fun, self, NULL);
 	gtk_text_view_add_overlay(GTK_TEXT_VIEW(self), priv->stroke_proxy.overlay, 0, 0);
+
+	mdnotebook_booktool_activated(priv->active_tool, self);
 
 	priv->stroke_proxy.active = mdnotebook_stroke_new(0xff000000);
 }
@@ -255,10 +281,12 @@ gboolean mdnotebook_view_select_tool(MdNotebookView* self, MdNotebookBookTool* t
 	priv = mdnotebook_view_get_instance_private(self);
 
 	if (g_list_store_find(priv->booktools, tool, NULL)) {
+		mdnotebook_booktool_deactivated(priv->active_tool, self);
 		priv->active_tool = tool;
+		mdnotebook_booktool_activated(priv->active_tool, self);
 		return TRUE;
 	} else {
-		g_warning("Tried to selection unregistered tool %s\n", g_type_name(G_OBJECT_TYPE(tool)));
+		g_warning("Tried to select unregistered tool %s\n", g_type_name(G_OBJECT_TYPE(tool)));
 		return FALSE;
 	}
 }
@@ -272,10 +300,12 @@ gboolean mdnotebook_view_select_tool_by_type(MdNotebookView* self, GType* tool) 
 
 	guint position;
 	if (g_list_store_find_with_equal_func(priv->booktools, tool, mdnotebook_view_cmp_booktool_type_t, &position)) {
+		mdnotebook_booktool_deactivated(priv->active_tool, self);
 		priv->active_tool = MDNOTEBOOK_BOOKTOOL(g_list_model_get_object(G_LIST_MODEL(priv->booktools), position));
+		mdnotebook_booktool_activated(priv->active_tool, self);
 		return TRUE;
 	} else {
-		g_warning("Tried to selection unregistered tool %s\n", g_type_name(*tool));
+		g_warning("Tried to select unregistered tool %s\n", g_type_name(*tool));
 		return FALSE;
 	}
 }
@@ -288,9 +318,36 @@ GListModel* mdnotebook_view_get_tools(MdNotebookView* self) {
 	return G_LIST_MODEL(priv->booktools);
 }
 
+void mdnotebook_view_set_cursor(MdNotebookView* self, GdkCursor* cursor) {
+	MdNotebookViewStrokeProxy* prox = mdnotebook_view_get_stroke_proxy(self);
+	if (!prox)
+		return;
+
+	gtk_widget_set_cursor(prox->overlay, cursor);
+	gtk_widget_set_cursor(GTK_WIDGET(self), cursor);
+}
+void mdnotebook_view_set_cursor_from_name(MdNotebookView* self, const gchar* cursor) {
+	MdNotebookViewStrokeProxy* prox = mdnotebook_view_get_stroke_proxy(self);
+	if (!prox)
+		return;
+
+	gtk_widget_set_cursor_from_name(prox->overlay, cursor);
+	gtk_widget_set_cursor_from_name(GTK_WIDGET(self), cursor);
+}
+
 MdNotebookViewStrokeProxy* mdnotebook_view_get_stroke_proxy(MdNotebookView* self) {
 	g_return_val_if_fail(MDNOTEBOOK_IS_VIEW(self), NULL);
 	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
 
 	return &priv->stroke_proxy;
+}
+
+void mdnotebook_view_set_stylus_gesture_state(MdNotebookView* self, gboolean state) {
+	g_return_if_fail(MDNOTEBOOK_IS_VIEW(self));
+	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
+
+	if (state)
+		gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(priv->stylus_gesture), GTK_PHASE_CAPTURE);
+	else
+		gtk_event_controller_set_propagation_phase(GTK_EVENT_CONTROLLER(priv->stylus_gesture), GTK_PHASE_NONE);
 }

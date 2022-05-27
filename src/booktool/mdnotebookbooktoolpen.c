@@ -5,10 +5,21 @@
 
 #define _ __attribute__((unused))
 
-G_DEFINE_TYPE(MdNotebookBookToolPen, mdnotebook_booktool_pen, MDNOTEBOOK_TYPE_BOOKTOOL)
+typedef struct {
+	gboolean in_gesture;
+} MdNotebookBookToolPenPrivate;
+
+G_DEFINE_TYPE_WITH_PRIVATE(MdNotebookBookToolPen, mdnotebook_booktool_pen, MDNOTEBOOK_TYPE_BOOKTOOL)
 
 static const gchar* mdnotebook_booktool_pen_booktool_icon_name(MdNotebookBookTool*) {
 	return "document-edit";
+}
+
+static void mdnotebook_booktool_pen_booktool_activated(MdNotebookBookTool*, MdNotebookView* view) {
+	mdnotebook_view_set_cursor_from_name(view, "crosshair");
+}
+static void mdnotebook_booktool_pen_booktool_deactivated(MdNotebookBookTool*, MdNotebookView* view) {
+	mdnotebook_view_set_cursor_from_name(view, NULL);
 }
 
 static void mdnotebook_booktool_pen_commit_stroke(MdNotebookBookTool* tool) {
@@ -159,8 +170,13 @@ commit_stroke_done:
 }
 
 static gboolean mdnotebook_booktool_pen_booktool_gesture_start(MdNotebookBookTool* tool, gdouble x, gdouble y, gdouble pressure) {
+	MdNotebookBookToolPenPrivate* priv = mdnotebook_booktool_pen_get_instance_private(MDNOTEBOOK_BOOKTOOL_PEN(tool));
 	MdNotebookView* view = mdnotebook_booktool_get_textview(tool);
 	MdNotebookViewStrokeProxy* stroke_proxy = mdnotebook_view_get_stroke_proxy(view);
+
+	priv->in_gesture = TRUE;
+	mdnotebook_view_set_cursor_from_name(view, "none");
+
 	stroke_proxy->active->num_nodes = 0;
 	// potentional reset the allocated stroke area back to 0x80?
 	mdnotebook_stroke_append_node(stroke_proxy->active, x, y, pressure);
@@ -177,8 +193,13 @@ static gboolean mdnotebook_booktool_pen_booktool_gesture_move(MdNotebookBookTool
 	return TRUE;
 }
 static gboolean mdnotebook_booktool_pen_booktool_gesture_end(MdNotebookBookTool* tool, gdouble x, gdouble y, gdouble pressure) {
+	MdNotebookBookToolPenPrivate* priv = mdnotebook_booktool_pen_get_instance_private(MDNOTEBOOK_BOOKTOOL_PEN(tool));
 	MdNotebookView* view = mdnotebook_booktool_get_textview(tool);
 	MdNotebookViewStrokeProxy* stroke_proxy = mdnotebook_view_get_stroke_proxy(view);
+
+	priv->in_gesture = FALSE;
+	mdnotebook_view_set_cursor_from_name(view, "crosshair");
+
 	mdnotebook_stroke_append_node(stroke_proxy->active, x, y, pressure);
 	gtk_widget_queue_draw(stroke_proxy->overlay);
 
@@ -187,15 +208,34 @@ static gboolean mdnotebook_booktool_pen_booktool_gesture_end(MdNotebookBookTool*
 	return TRUE;
 }
 
+static void mdnotebook_booktool_pen_booktool_render_pointer_texture(MdNotebookBookTool* tool, cairo_t* ctx, gdouble x, gdouble y) {
+	MdNotebookBookToolPenPrivate* priv = mdnotebook_booktool_pen_get_instance_private(MDNOTEBOOK_BOOKTOOL_PEN(tool));
+
+	if (!priv->in_gesture)
+		return;
+
+	cairo_set_line_width(ctx, 1.0);
+	cairo_set_source_rgba(ctx, 0.09803921568627451, 0.7019607843137254, 0.2, 0.5);
+	cairo_arc(ctx, x, y, MDNOTEBOOK_STROKE_SIZE_MULTIPLIER / 2.0, 0, 2*G_PI);
+	cairo_stroke(ctx);
+}
+
 static void mdnotebook_booktool_pen_class_init(MdNotebookBookToolPenClass* class) {
 	MdNotebookBookToolClass* booktool_class = MDNOTEBOOK_BOOKTOOL_CLASS(class);
 	booktool_class->icon_name = mdnotebook_booktool_pen_booktool_icon_name;
+	booktool_class->activated= mdnotebook_booktool_pen_booktool_activated;
+	booktool_class->deactivated= mdnotebook_booktool_pen_booktool_deactivated;
 	booktool_class->gesture_start = mdnotebook_booktool_pen_booktool_gesture_start;
 	booktool_class->gesture_end = mdnotebook_booktool_pen_booktool_gesture_end;
 	booktool_class->gesture_move = mdnotebook_booktool_pen_booktool_gesture_move;
+	booktool_class->render_pointer_texture = mdnotebook_booktool_pen_booktool_render_pointer_texture;
 }
 
-static void mdnotebook_booktool_pen_init(_ MdNotebookBookToolPen* self) {}
+static void mdnotebook_booktool_pen_init(MdNotebookBookToolPen* self) {
+	MdNotebookBookToolPenPrivate* priv = mdnotebook_booktool_pen_get_instance_private(self);
+
+	priv->in_gesture = FALSE;
+}
 
 MdNotebookBookTool* mdnotebook_booktool_pen_new(MdNotebookView* view) {
 	return g_object_new(MDNOTEBOOK_TYPE_BOOKTOOL_PEN, "textview", view, NULL);

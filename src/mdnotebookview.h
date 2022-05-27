@@ -34,8 +34,12 @@ guint mdnotebook_view_get_latest_keyval(MdNotebookView* self);
 gboolean mdnotebook_view_select_tool_by_type(MdNotebookView* self, GType* tool);
 GListModel* mdnotebook_view_get_tools(MdNotebookView* self);
 
+void mdnotebook_view_set_cursor(MdNotebookView* self, GdkCursor* cursor);
+void mdnotebook_view_set_cursor_from_name(MdNotebookView* self, const gchar* cursor);
+
 #ifdef MDNOTEBOOK_VIEW_EXPOSE_INTERNAS
 MdNotebookViewStrokeProxy* mdnotebook_view_get_stroke_proxy(MdNotebookView* self);
+void mdnotebook_view_set_stylus_gesture_state(MdNotebookView* self, gboolean state);
 #endif // MDNOTEBOOK_VIEW_EXPOSE_INTERNAS
 
 G_END_DECLS

@@ -7,6 +7,8 @@
 
 G_BEGIN_DECLS
 
+#define MDNOTEBOOK_STROKE_SIZE_MULTIPLIER 5.0
+
 typedef struct {
 	gdouble x;
 	gdouble y;

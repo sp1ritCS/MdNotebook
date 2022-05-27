@@ -1,3 +1,4 @@
+#define MDNOTEBOOK_VIEW_EXPOSE_INTERNAS
 #include "booktool/mdnotebookbooktool.h"
 #include "mdnotebookviewextra.h"
 
@@ -136,6 +137,14 @@ gboolean mdnotebook_booktool_gesture_move(MdNotebookBookTool* self, gdouble x, g
 		return class->gesture_move(self, x, y, pressure);
 	else
 		return FALSE;
+}
+void mdnotebook_booktool_render_pointer_texture(MdNotebookBookTool* self, cairo_t* ctx, gdouble x, gdouble y) {
+	MdNotebookBookToolClass* class;
+	g_return_if_fail(MDNOTEBOOK_IS_BOOKTOOL(self));
+
+	class = MDNOTEBOOK_BOOKTOOL_GET_CLASS(self);
+	if (class->render_pointer_texture != NULL)
+		class->render_pointer_texture(self, ctx, x, y);
 }
 
 MdNotebookView* mdnotebook_booktool_get_textview(MdNotebookBookTool* self) {

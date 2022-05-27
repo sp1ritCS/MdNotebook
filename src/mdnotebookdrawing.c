@@ -82,7 +82,7 @@ void mdnotebook_stroke_render(MdNotebookStroke* stroke, cairo_t* ctx) {
 		MdNotebookStrokeNode node = stroke->nodes[i];
 		cairo_move_to(ctx, prevnode.x, prevnode.y);
 		cairo_line_to(ctx, node.x, node.y);
-		cairo_set_line_width(ctx, prevnode.p * 5);
+		cairo_set_line_width(ctx, prevnode.p * MDNOTEBOOK_STROKE_SIZE_MULTIPLIER);
 		cairo_stroke(ctx);
 	}
 }
