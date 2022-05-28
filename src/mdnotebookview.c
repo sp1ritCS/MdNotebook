@@ -11,6 +11,7 @@
 #include "bufitem/mdnotebookbufitemtext.h"
 
 #include "booktool/mdnotebookbooktool.h"
+#include "booktool/mdnotebookbooktooleraser.h"
 #include "booktool/mdnotebookbooktoolpen.h"
 #include "booktool/mdnotebookbooktooltext.h"
 
@@ -195,9 +196,11 @@ static void mdnotebook_view_init(MdNotebookView* self) {
 	priv->booktools = g_list_store_new(MDNOTEBOOK_TYPE_BOOKTOOL);
 	MdNotebookBookTool* texttool = mdnotebook_booktool_text_new(self);
 	MdNotebookBookTool* pentool = mdnotebook_booktool_pen_new(self);
+	MdNotebookBookTool* erasertool = mdnotebook_booktool_eraser_new(self);
 	priv->active_tool = pentool;
 	mdnotebook_view_add_booktool(self, texttool);
 	mdnotebook_view_add_booktool(self, pentool);
+	mdnotebook_view_add_booktool(self, erasertool);
 
 	GtkEventController* motionctl = gtk_event_controller_motion_new();
 	g_signal_connect(motionctl, "motion", G_CALLBACK(mdnotebook_view_pointer_motion), self);
@@ -333,6 +336,14 @@ void mdnotebook_view_set_cursor_from_name(MdNotebookView* self, const gchar* cur
 
 	gtk_widget_set_cursor_from_name(prox->overlay, cursor);
 	gtk_widget_set_cursor_from_name(GTK_WIDGET(self), cursor);
+}
+
+void mdnotebook_view_redraw_overlay(MdNotebookView* self) {
+	MdNotebookViewStrokeProxy* stroke_proxy = mdnotebook_view_get_stroke_proxy(self);
+	if (!stroke_proxy)
+		return;
+
+	gtk_widget_queue_draw(stroke_proxy->overlay);
 }
 
 MdNotebookViewStrokeProxy* mdnotebook_view_get_stroke_proxy(MdNotebookView* self) {

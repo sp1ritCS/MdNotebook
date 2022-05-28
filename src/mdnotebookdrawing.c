@@ -18,6 +18,7 @@ void mdnotebook_stroke_free(gpointer strokeptr) {
 
 	MdNotebookStroke* stroke = (MdNotebookStroke*)strokeptr;
 	g_free(stroke->nodes);
+	g_free(stroke);
 }
 
 void mdnotebook_stroke_append_node(MdNotebookStroke* stroke, gdouble x, gdouble y, gdouble pressure) {
@@ -64,6 +65,22 @@ gboolean mdnotebook_stroke_get_bbox(MdNotebookStroke* stroke, gdouble* x0, gdoub
 	}
 
 	return TRUE;
+}
+
+/*
+ * Test if rectangle defined by (x0|y0)@(x1|y1) contains a stroke
+ */
+gboolean mdnotebook_stroke_test_rectangle(MdNotebookStroke* stroke, gdouble x0, gdouble y0, gdouble x1, gdouble y1) {
+	if (!stroke)
+		return FALSE;
+
+	for (gsize i = 0; i < stroke->num_nodes; i++) {
+		MdNotebookStrokeNode node = stroke->nodes[i];
+		if ((x0 < node.x) && (y0 < node.y) &&
+			(x1 > node.x) && (y1 > node.y))
+			return TRUE;
+	}
+	return FALSE;
 }
 
 void mdnotebook_stroke_render(MdNotebookStroke* stroke, cairo_t* ctx, gboolean debug_mode) {
@@ -114,11 +131,11 @@ void mdnotebook_stroke_set_color(MdNotebookStroke* stroke, guint32 color) {
 	stroke->color = color;
 }
 
-
+// TODO: implement more efficient algorithm that keeps track of the tip of the stroke
 typedef struct {
 	gint width, height;
 	GSList* strokes;
-	GSList* stroke_head;
+	//GSList* stroke_head;
 
 	gboolean debug;
 } MdNotebookBoundDrawingPrivate;
@@ -226,7 +243,7 @@ static void mdnotebook_bounddrawing_init(MdNotebookBoundDrawing* self) {
 	priv->width = -1;
 	priv->height = -1;
 	priv->strokes = g_slist_alloc();
-	priv->stroke_head = priv->strokes;
+	//priv->stroke_head = priv->strokes;
 
 	priv->debug = FALSE;
 }
@@ -367,4 +384,39 @@ gboolean mdnotebook_bounddrawing_add_stroke(MdNotebookBoundDrawing* self, MdNote
 	mdnotebook_bounddrawing_update_size(self, neww, newh, 0, 0);
 
 	return TRUE;
+}
+
+void mdnotebook_bounddrawing_erase_sqare_area(MdNotebookBoundDrawing* self, gdouble cx, gdouble cy, gdouble padding) {
+	g_return_if_fail(MDNOTEBOOK_IS_BOUNDDRAWING(self));
+	MdNotebookBoundDrawingPrivate* priv = mdnotebook_bounddrawing_get_instance_private(self);
+
+	gdouble ex0,ey0,ex1,ey1;
+	gboolean rerender = FALSE;
+
+	ex0 = cx-padding;
+	ey0 = cy-padding;
+	ex1 = cx+padding;
+	ey1 = cy+padding;
+
+	GSList* tmp = NULL;
+	GSList** head = &priv->strokes;
+	while (*head) {
+		tmp = *head;
+
+		gboolean inside_rect = mdnotebook_stroke_test_rectangle((MdNotebookStroke*)(*head)->data, ex0, ey0, ex1, ey1);
+		rerender = rerender || inside_rect;
+
+		if (inside_rect) {
+			*head = tmp->next;
+			mdnotebook_stroke_free(tmp->data);
+			g_slist_free_1(tmp);
+		} else {
+			head = &tmp->next;
+		}
+	}
+	if (!priv->strokes)
+		priv->strokes = g_slist_alloc();
+
+	if (rerender)
+		gtk_widget_queue_draw(GTK_WIDGET(self));
 }

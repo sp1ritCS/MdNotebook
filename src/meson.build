@@ -9,6 +9,7 @@ src = [
   'mdnotebookzoomview.c',
   [
     'booktool/mdnotebookbooktool.c',
+    'booktool/mdnotebookbooktooleraser.c',
     'booktool/mdnotebookbooktoolpen.c',
     'booktool/mdnotebookbooktooltext.c'
   ],
@@ -36,6 +37,7 @@ headers = [
   'mdnotebookzoomview.h',
   [
     'booktool/mdnotebookbooktool.h',
+    'booktool/mdnotebookbooktooleraser.h',
     'booktool/mdnotebookbooktoolpen.h',
     'booktool/mdnotebookbooktooltext.h'
   ],

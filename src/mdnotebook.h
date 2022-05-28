@@ -4,6 +4,7 @@
 #include <mdnotebookconfig.h>
 
 #include <booktool/mdnotebookbooktool.h>
+#include <booktool/mdnotebookbooktooleraser.h>
 #include <booktool/mdnotebookbooktoolpen.h>
 #include <booktool/mdnotebookbooktooltext.h>
 

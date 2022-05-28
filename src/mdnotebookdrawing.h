@@ -25,6 +25,7 @@ MdNotebookStroke* mdnotebook_stroke_new(guint32 color);
 void mdnotebook_stroke_append_node(MdNotebookStroke* stroke, gdouble x, gdouble y, gdouble pressure);
 void mdnotebook_stroke_force_min_xy(MdNotebookStroke* stroke, gdouble x, gdouble y);
 gboolean mdnotebook_stroke_get_bbox(MdNotebookStroke* stroke, gdouble* x0, gdouble* x1, gdouble* y0, gdouble* y1);
+gboolean mdnotebook_stroke_test_rectangle(MdNotebookStroke* stroke, gdouble x0, gdouble y0, gdouble x1, gdouble y1);
 void mdnotebook_stroke_render(MdNotebookStroke* stroke, cairo_t* ctx, gboolean debug_mode);
 void mdnotebook_stroke_set_color(MdNotebookStroke* stroke, guint32 color);
 
@@ -49,6 +50,8 @@ gboolean mdnotebook_bounddrawing_get_size(MdNotebookBoundDrawing* self, gint* wi
 
 gboolean mdnotebook_bounddrawing_update_size(MdNotebookBoundDrawing* self, gint neww, int newh, int dx, int dy);
 gboolean mdnotebook_bounddrawing_add_stroke(MdNotebookBoundDrawing* self, MdNotebookStroke* stroke /* takes ownership */, gdouble dx, gdouble dy, gboolean force);
+
+void mdnotebook_bounddrawing_erase_sqare_area(MdNotebookBoundDrawing* self, gdouble cx, gdouble cy, gdouble padding);
 
 G_END_DECLS
 

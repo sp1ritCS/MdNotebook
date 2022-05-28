@@ -215,9 +215,11 @@ static void mdnotebook_booktool_pen_booktool_render_pointer_texture(MdNotebookBo
 		return;
 
 	cairo_set_line_width(ctx, 1.0);
-	cairo_set_source_rgba(ctx, 0.09803921568627451, 0.7019607843137254, 0.2, 0.5);
+	cairo_set_source_rgba(ctx, 0.0, 0.8, 0.1, 0.5);
 	cairo_arc(ctx, x, y, MDNOTEBOOK_STROKE_SIZE_MULTIPLIER / 2.0, 0, 2*G_PI);
-	cairo_stroke(ctx);
+	cairo_stroke_preserve(ctx);
+	cairo_set_source_rgba(ctx, 0.1, 0.7, 0.2, 0.5);
+	cairo_fill(ctx);
 }
 
 static void mdnotebook_booktool_pen_class_init(MdNotebookBookToolPenClass* class) {

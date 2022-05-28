@@ -37,6 +37,8 @@ GListModel* mdnotebook_view_get_tools(MdNotebookView* self);
 void mdnotebook_view_set_cursor(MdNotebookView* self, GdkCursor* cursor);
 void mdnotebook_view_set_cursor_from_name(MdNotebookView* self, const gchar* cursor);
 
+void mdnotebook_view_redraw_overlay(MdNotebookView* self);
+
 #ifdef MDNOTEBOOK_VIEW_EXPOSE_INTERNAS
 MdNotebookViewStrokeProxy* mdnotebook_view_get_stroke_proxy(MdNotebookView* self);
 void mdnotebook_view_set_stylus_gesture_state(MdNotebookView* self, gboolean state);
