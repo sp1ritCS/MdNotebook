@@ -8,6 +8,7 @@ MdNotebookStroke* mdnotebook_stroke_new(guint32 color) {
 	stroke->num_nodes = 0;
 	stroke->nodes = g_new(MdNotebookStrokeNode, 0x80);
 	stroke->alloc_nodes = 0x80;
+	stroke->selected = FALSE;
 
 	return stroke;
 }
@@ -83,6 +84,39 @@ gboolean mdnotebook_stroke_test_rectangle(MdNotebookStroke* stroke, gdouble x0, 
 	return FALSE;
 }
 
+// Percentage of "nodes" of the stroke that need to be
+// selected in order for the  stroke to be selected
+const gdouble PER_NODE_SELECTION = 0.35;
+// Credit Wm. Randolph Franklin <wrf@ecse.rpi.edu>
+// In the FAQ of comp.graphics.algorithms
+//   Subject 2.03: How do I find if a point lies within a polygon?
+gboolean mdnotebook_stroke_select_area(MdNotebookStroke* stroke, const MdNotebookBoundDrawingSelectionNode* nodes, gsize num_nodes, gdouble ax, gdouble ay) {
+	guint contained_nodes = 0;
+	for (gsize i = 0; i < stroke->num_nodes; i++) {
+		MdNotebookStrokeNode* node = &stroke->nodes[i];
+
+		unsigned int j, k, c = 0;
+		for (j = 0, k = num_nodes - 1; j < num_nodes; k = j++) {
+			MdNotebookBoundDrawingSelectionNode sel_node = nodes[j];
+			sel_node.x += ax; sel_node.y += ay;
+			MdNotebookBoundDrawingSelectionNode p_sel_node = nodes[k];
+			p_sel_node.x += ax; p_sel_node.y += ay;
+
+			if ((((sel_node.y<=node->y) && (node->y<p_sel_node.y)) ||
+			     ((p_sel_node.y<=node->y) && (node->y<sel_node.y))) &&
+			    (node->x < (p_sel_node.x - sel_node.x) * (node->y - sel_node.y) / (p_sel_node.y - sel_node.y) + sel_node.x))
+				c = !c;
+		}
+		if (c)
+			contained_nodes++;
+	}
+
+	gboolean oldstate = stroke->selected;
+	stroke->selected = contained_nodes >= stroke->num_nodes * PER_NODE_SELECTION;
+
+	return oldstate != stroke->selected;
+}
+
 void mdnotebook_stroke_render(MdNotebookStroke* stroke, cairo_t* ctx, gboolean debug_mode) {
 	if (!stroke)
 		return;
@@ -122,6 +156,28 @@ void mdnotebook_stroke_render(MdNotebookStroke* stroke, cairo_t* ctx, gboolean d
 			cairo_line_to(ctx, node.x - 2.5, node.y + 2.5);
 			cairo_stroke(ctx);
 		}
+}
+void mdnotebook_stroke_render_selection_glow(MdNotebookStroke* stroke, cairo_t* ctx) {
+	if (!stroke)
+		return;
+	if (!stroke->selected)
+		return;
+
+	cairo_set_source_rgba(ctx,
+		(gdouble)((stroke->color >> 16) & 0xFF) / (gdouble)0xFF,
+		(gdouble)((stroke->color >>  8) & 0xFF) / (gdouble)0xFF,
+		(gdouble)((stroke->color >>  0) & 0xFF) / (gdouble)0xFF,
+		(gdouble)((stroke->color >> 24) & 0xFF) / (gdouble)0xFF
+	);
+	cairo_set_line_cap(ctx, CAIRO_LINE_CAP_ROUND);
+	for (gsize i = 1; i < stroke->num_nodes; i++) {
+		MdNotebookStrokeNode prevnode = stroke->nodes[i-1];
+		MdNotebookStrokeNode node = stroke->nodes[i];
+		cairo_move_to(ctx, prevnode.x, prevnode.y);
+		cairo_line_to(ctx, node.x, node.y);
+		cairo_set_line_width(ctx, prevnode.p * MDNOTEBOOK_STROKE_SIZE_MULTIPLIER + 6);
+		cairo_stroke(ctx);
+	}
 }
 
 void mdnotebook_stroke_set_color(MdNotebookStroke* stroke, guint32 color) {
@@ -198,6 +254,11 @@ static void mdnotebook_bounddrawing_widget_measure(GtkWidget* widget, GtkOrienta
 	}
 }
 
+static void mdnotebook_bounddrawing_stroke_iter_glow(MdNotebookStroke* stroke, cairo_t* ctx) {
+	if (!stroke)
+		return;
+	mdnotebook_stroke_render_selection_glow(stroke, ctx);
+}
 typedef struct {
 	MdNotebookBoundDrawing* self;
 	cairo_t* ctx;
@@ -215,6 +276,17 @@ static void mdnotebook_bounddrawing_widget_snapshot(GtkWidget* widget, GtkSnapsh
 		height = gtk_widget_get_allocated_height(widget);
 
 	cairo_t* ctx = gtk_snapshot_append_cairo(snapshot, &GRAPHENE_RECT_INIT(0, 0, width, height));
+
+	// BEGIN selection glow
+	g_slist_foreach(priv->strokes, (GFunc)mdnotebook_bounddrawing_stroke_iter_glow, ctx);
+	cairo_save(ctx);
+	cairo_set_source_rgba(ctx, .0, .0, .0, .3);
+	cairo_rectangle(ctx, 0, 0, width, height);
+	cairo_set_operator(ctx, CAIRO_OPERATOR_DEST_IN);
+	cairo_fill(ctx);
+	cairo_restore(ctx);
+	// END selection glow
+
 	MdNotebookBoundDrawingStrokeIterUd stroke_iter_ud = { .self = MDNOTEBOOK_BOUNDDRAWING(widget), .ctx = ctx };
 	g_slist_foreach(priv->strokes, (GFunc)mdnotebook_bounddrawing_stroke_iter, &stroke_iter_ud);
 
@@ -418,5 +490,36 @@ void mdnotebook_bounddrawing_erase_sqare_area(MdNotebookBoundDrawing* self, gdou
 		priv->strokes = g_slist_alloc();
 
 	if (rerender)
+		gtk_widget_queue_draw(GTK_WIDGET(self));
+}
+
+void mdnotebook_bounddrawing_select_area(MdNotebookBoundDrawing* self, MdNotebookBoundDrawingSelectionNode* nodes, gsize num_nodes, gdouble ax, gdouble ay) {
+	g_return_if_fail(MDNOTEBOOK_IS_BOUNDDRAWING(self));
+	MdNotebookBoundDrawingPrivate* priv = mdnotebook_bounddrawing_get_instance_private(self);
+
+	gboolean will_select = FALSE;
+	GSList* iter = priv->strokes;
+	while (iter) {
+		will_select |= mdnotebook_stroke_select_area((MdNotebookStroke*)iter->data, nodes, num_nodes, ax, ay);
+		iter = iter->next;
+	}
+
+	if (will_select)
+		gtk_widget_queue_draw(GTK_WIDGET(self));
+}
+void mdnotebook_bounddrawing_unselect(MdNotebookBoundDrawing* self) {
+	g_return_if_fail(MDNOTEBOOK_IS_BOUNDDRAWING(self));
+	MdNotebookBoundDrawingPrivate* priv = mdnotebook_bounddrawing_get_instance_private(self);
+
+	gboolean need_rerender = FALSE;
+	GSList* iter = priv->strokes;
+	while (iter) {
+		MdNotebookStroke* stroke = (MdNotebookStroke*)iter->data;
+		need_rerender |= stroke->selected;
+		stroke->selected = FALSE;
+		iter = iter->next;
+	}
+
+	if (need_rerender)
 		gtk_widget_queue_draw(GTK_WIDGET(self));
 }

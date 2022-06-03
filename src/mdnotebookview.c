@@ -13,6 +13,7 @@
 #include "booktool/mdnotebookbooktool.h"
 #include "booktool/mdnotebookbooktooleraser.h"
 #include "booktool/mdnotebookbooktoolpen.h"
+#include "booktool/mdnotebookbooktoolselect.h"
 #include "booktool/mdnotebookbooktooltext.h"
 
 #include "bufitem/mdnotebookbufitemcheckmark.h"
@@ -57,7 +58,7 @@ static void mdnotebook_view_stroke_proxy_draw_fun(_ GtkDrawingArea* area, cairo_
 
 	mdnotebook_stroke_render(priv->stroke_proxy.active, ctx, FALSE);
 
-	mdnotebook_booktool_render_pointer_texture(priv->active_tool, ctx, priv->pointer_pos.x, priv->pointer_pos.y);
+	mdnotebook_booktool_render_surface(priv->active_tool, ctx, priv->pointer_pos.x, priv->pointer_pos.y);
 }
 
 static void mdnotebook_view_dispose(GObject* object) {
@@ -197,10 +198,12 @@ static void mdnotebook_view_init(MdNotebookView* self) {
 	MdNotebookBookTool* texttool = mdnotebook_booktool_text_new(self);
 	MdNotebookBookTool* pentool = mdnotebook_booktool_pen_new(self);
 	MdNotebookBookTool* erasertool = mdnotebook_booktool_eraser_new(self);
+	MdNotebookBookTool* selecttool = mdnotebook_booktool_select_new(self);
 	priv->active_tool = pentool;
 	mdnotebook_view_add_booktool(self, texttool);
 	mdnotebook_view_add_booktool(self, pentool);
 	mdnotebook_view_add_booktool(self, erasertool);
+	mdnotebook_view_add_booktool(self, selecttool);
 
 	GtkEventController* motionctl = gtk_event_controller_motion_new();
 	g_signal_connect(motionctl, "motion", G_CALLBACK(mdnotebook_view_pointer_motion), self);

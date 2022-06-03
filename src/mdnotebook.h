@@ -6,6 +6,7 @@
 #include <booktool/mdnotebookbooktool.h>
 #include <booktool/mdnotebookbooktooleraser.h>
 #include <booktool/mdnotebookbooktoolpen.h>
+#include <booktool/mdnotebookbooktoolselect.h>
 #include <booktool/mdnotebookbooktooltext.h>
 
 #ifdef MDNOTEBOOK_HAVE_LATEX

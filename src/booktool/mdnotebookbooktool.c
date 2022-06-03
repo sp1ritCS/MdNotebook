@@ -138,13 +138,13 @@ gboolean mdnotebook_booktool_gesture_move(MdNotebookBookTool* self, gdouble x, g
 	else
 		return FALSE;
 }
-void mdnotebook_booktool_render_pointer_texture(MdNotebookBookTool* self, cairo_t* ctx, gdouble x, gdouble y) {
+void mdnotebook_booktool_render_surface(MdNotebookBookTool* self, cairo_t* ctx, gdouble x, gdouble y) {
 	MdNotebookBookToolClass* class;
 	g_return_if_fail(MDNOTEBOOK_IS_BOOKTOOL(self));
 
 	class = MDNOTEBOOK_BOOKTOOL_GET_CLASS(self);
-	if (class->render_pointer_texture != NULL)
-		class->render_pointer_texture(self, ctx, x, y);
+	if (class->render_surface != NULL)
+		class->render_surface(self, ctx, x, y);
 }
 
 MdNotebookView* mdnotebook_booktool_get_textview(MdNotebookBookTool* self) {

@@ -12,7 +12,7 @@ typedef struct {
 G_DEFINE_TYPE_WITH_PRIVATE(MdNotebookBookToolPen, mdnotebook_booktool_pen, MDNOTEBOOK_TYPE_BOOKTOOL)
 
 static const gchar* mdnotebook_booktool_pen_booktool_icon_name(MdNotebookBookTool*) {
-	return "document-edit";
+	return "document-edit-symbolic";
 }
 
 static void mdnotebook_booktool_pen_booktool_activated(MdNotebookBookTool*, MdNotebookView* view) {
@@ -208,7 +208,7 @@ static gboolean mdnotebook_booktool_pen_booktool_gesture_end(MdNotebookBookTool*
 	return TRUE;
 }
 
-static void mdnotebook_booktool_pen_booktool_render_pointer_texture(MdNotebookBookTool* tool, cairo_t* ctx, gdouble x, gdouble y) {
+static void mdnotebook_booktool_pen_booktool_render_surface(MdNotebookBookTool* tool, cairo_t* ctx, gdouble x, gdouble y) {
 	MdNotebookBookToolPenPrivate* priv = mdnotebook_booktool_pen_get_instance_private(MDNOTEBOOK_BOOKTOOL_PEN(tool));
 
 	if (!priv->in_gesture)
@@ -230,7 +230,7 @@ static void mdnotebook_booktool_pen_class_init(MdNotebookBookToolPenClass* class
 	booktool_class->gesture_start = mdnotebook_booktool_pen_booktool_gesture_start;
 	booktool_class->gesture_end = mdnotebook_booktool_pen_booktool_gesture_end;
 	booktool_class->gesture_move = mdnotebook_booktool_pen_booktool_gesture_move;
-	booktool_class->render_pointer_texture = mdnotebook_booktool_pen_booktool_render_pointer_texture;
+	booktool_class->render_surface = mdnotebook_booktool_pen_booktool_render_surface;
 }
 
 static void mdnotebook_booktool_pen_init(MdNotebookBookToolPen* self) {

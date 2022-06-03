@@ -11,6 +11,7 @@ src = [
     'booktool/mdnotebookbooktool.c',
     'booktool/mdnotebookbooktooleraser.c',
     'booktool/mdnotebookbooktoolpen.c',
+    'booktool/mdnotebookbooktoolselect.c',
     'booktool/mdnotebookbooktooltext.c'
   ],
   [
@@ -39,6 +40,7 @@ headers = [
     'booktool/mdnotebookbooktool.h',
     'booktool/mdnotebookbooktooleraser.h',
     'booktool/mdnotebookbooktoolpen.h',
+    'booktool/mdnotebookbooktoolselect.h',
     'booktool/mdnotebookbooktooltext.h'
   ],
   [

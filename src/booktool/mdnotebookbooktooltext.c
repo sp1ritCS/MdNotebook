@@ -6,7 +6,7 @@
 G_DEFINE_TYPE(MdNotebookBookToolText, mdnotebook_booktool_text, MDNOTEBOOK_TYPE_BOOKTOOL)
 
 static const gchar* mdnotebook_booktool_text_booktool_icon_name(MdNotebookBookTool*) {
-	return "format-justify-left";
+	return "format-justify-left-symbolic";
 }
 
 static void mdnotebook_booktool_text_booktool_activated(MdNotebookBookTool*, MdNotebookView* view) {

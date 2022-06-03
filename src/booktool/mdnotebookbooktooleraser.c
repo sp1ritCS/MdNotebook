@@ -88,7 +88,7 @@ static gboolean mdnotebook_booktool_eraser_booktool_gesture_end(MdNotebookBookTo
 	return TRUE;
 }
 
-static void mdnotebook_booktool_eraser_booktool_render_pointer_texture(MdNotebookBookTool* tool, cairo_t* ctx, gdouble x, gdouble y) {
+static void mdnotebook_booktool_eraser_booktool_render_surface(MdNotebookBookTool* tool, cairo_t* ctx, gdouble x, gdouble y) {
 	MdNotebookBookToolEraserPrivate* priv = mdnotebook_booktool_eraser_get_instance_private(MDNOTEBOOK_BOOKTOOL_ERASER(tool));
 
 	if (!priv->in_gesture)
@@ -113,7 +113,7 @@ static void mdnotebook_booktool_eraser_class_init(MdNotebookBookToolEraserClass*
 	booktool_class->gesture_start = mdnotebook_booktool_eraser_booktool_gesture_start;
 	booktool_class->gesture_end = mdnotebook_booktool_eraser_booktool_gesture_end;
 	booktool_class->gesture_move = mdnotebook_booktool_eraser_booktool_gesture_move;
-	booktool_class->render_pointer_texture = mdnotebook_booktool_eraser_booktool_render_pointer_texture;
+	booktool_class->render_surface = mdnotebook_booktool_eraser_booktool_render_surface;
 }
 
 static void mdnotebook_booktool_eraser_init(MdNotebookBookToolEraser* self) {
