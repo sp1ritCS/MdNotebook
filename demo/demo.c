@@ -19,6 +19,7 @@ static void activate(GtkApplication* app, gpointer) {
 	gtk_widget_set_vexpand(scroll, TRUE);
 
 	view = mdnotebook_zoomview_new();
+	mdnotebook_view_attach_action_group(MDNOTEBOOK_VIEW(mdnotebook_zoomview_get_textview(MDNOTEBOOK_ZOOMVIEW(view))), GTK_APPLICATION_WINDOW(window));
 	buf = MDNOTEBOOK_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(mdnotebook_zoomview_get_textview(MDNOTEBOOK_ZOOMVIEW(view)))));
 
 	gtk_text_buffer_get_start_iter(GTK_TEXT_BUFFER(buf), &iter);
@@ -67,6 +68,10 @@ int main(int argc, char** argv) {
 	int status;
 
 	app = gtk_application_new("arpa.sp1rit.MdNotebookDemo", G_APPLICATION_FLAGS_NONE);
+
+	const gchar *delete_selection_accels[] = { "Delete", NULL };
+	gtk_application_set_accels_for_action(app, "view.delete-selection", delete_selection_accels);
+
 	g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
 
 	status = g_application_run(G_APPLICATION(app), argc, argv);

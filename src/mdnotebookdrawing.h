@@ -63,6 +63,7 @@ void mdnotebook_bounddrawing_erase_sqare_area(MdNotebookBoundDrawing* self, gdou
 
 void mdnotebook_bounddrawing_select_area(MdNotebookBoundDrawing* self, MdNotebookBoundDrawingSelectionNode* nodes, gsize num_nodes, gdouble ax, gdouble ay);
 void mdnotebook_bounddrawing_unselect(MdNotebookBoundDrawing* self);
+void mdnotebook_bounddrawing_delete_selected(MdNotebookBoundDrawing* self);
 
 G_END_DECLS
 

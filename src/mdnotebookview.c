@@ -34,6 +34,7 @@ typedef struct {
 	gdouble y;
 } MdNotebookViewPointerPosition;
 typedef struct {
+	GSimpleActionGroup* actions;
 	GdkModifierType modifier_keys;
 	guint latest_keyval;
 	GListStore* booktools;
@@ -65,6 +66,7 @@ static void mdnotebook_view_dispose(GObject* object) {
 	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(MDNOTEBOOK_VIEW(object));
 
 	g_clear_object(&priv->booktools);
+	g_clear_object(&priv->actions);
 
 	if (priv->stroke_proxy.active)
 		g_free(g_steal_pointer(&priv->stroke_proxy.active));
@@ -169,6 +171,8 @@ static void mdnotebook_view_init(MdNotebookView* self) {
 	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
 	MdNotebookBuffer* buffer = MDNOTEBOOK_BUFFER(gtk_text_view_get_buffer(GTK_TEXT_VIEW(self)));
 
+	priv->actions = g_simple_action_group_new();
+
 	priv->modifier_keys = 0;
 	priv->latest_keyval = 0;
 
@@ -261,6 +265,21 @@ guint mdnotebook_view_get_latest_keyval(MdNotebookView* self) {
 	MdNotebookViewPrivate* priv = mdnotebook_view_get_instance_private(self);
 
 	return priv->latest_keyval;
+}
+
+void mdnotebook_view_insert_action(MdNotebookView* self, GAction* action) {
+	MdNotebookViewPrivate* priv;
+	g_return_if_fail(MDNOTEBOOK_IS_VIEW(self));
+	priv = mdnotebook_view_get_instance_private(self);
+
+	g_action_map_add_action(G_ACTION_MAP(priv->actions), action);
+}
+void mdnotebook_view_attach_action_group(MdNotebookView* self, GtkApplicationWindow* win) {
+	MdNotebookViewPrivate* priv;
+	g_return_if_fail(MDNOTEBOOK_IS_VIEW(self));
+	priv = mdnotebook_view_get_instance_private(self);
+
+	gtk_widget_insert_action_group(GTK_WIDGET(win), "view", G_ACTION_GROUP(priv->actions));
 }
 
 static gboolean mdnotebook_view_cmp_booktool_type(gconstpointer lhs, gconstpointer rhs) {

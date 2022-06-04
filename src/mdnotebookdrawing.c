@@ -91,6 +91,9 @@ const gdouble PER_NODE_SELECTION = 0.35;
 // In the FAQ of comp.graphics.algorithms
 //   Subject 2.03: How do I find if a point lies within a polygon?
 gboolean mdnotebook_stroke_select_area(MdNotebookStroke* stroke, const MdNotebookBoundDrawingSelectionNode* nodes, gsize num_nodes, gdouble ax, gdouble ay) {
+	if (!stroke)
+		return FALSE;
+
 	guint contained_nodes = 0;
 	for (gsize i = 0; i < stroke->num_nodes; i++) {
 		MdNotebookStrokeNode* node = &stroke->nodes[i];
@@ -515,11 +518,43 @@ void mdnotebook_bounddrawing_unselect(MdNotebookBoundDrawing* self) {
 	GSList* iter = priv->strokes;
 	while (iter) {
 		MdNotebookStroke* stroke = (MdNotebookStroke*)iter->data;
-		need_rerender |= stroke->selected;
-		stroke->selected = FALSE;
+		if (stroke) {
+			need_rerender |= stroke->selected;
+			stroke->selected = FALSE;
+		}
 		iter = iter->next;
 	}
 
 	if (need_rerender)
+		gtk_widget_queue_draw(GTK_WIDGET(self));
+}
+void mdnotebook_bounddrawing_delete_selected(MdNotebookBoundDrawing* self) {
+	g_return_if_fail(MDNOTEBOOK_IS_BOUNDDRAWING(self));
+	MdNotebookBoundDrawingPrivate* priv = mdnotebook_bounddrawing_get_instance_private(self);
+
+	gboolean rerender = FALSE;
+
+	GSList* tmp = NULL;
+	GSList** head = &priv->strokes;
+	while (*head) {
+		tmp = *head;
+
+		gboolean selected = FALSE;
+		if ((*head)->data)
+			selected = ((MdNotebookStroke*)(*head)->data)->selected;
+		rerender = rerender || selected;
+
+		if (selected) {
+			*head = tmp->next;
+			mdnotebook_stroke_free(tmp->data);
+			g_slist_free_1(tmp);
+		} else {
+			head = &tmp->next;
+		}
+	}
+	if (!priv->strokes)
+		priv->strokes = g_slist_alloc();
+
+	if (rerender)
 		gtk_widget_queue_draw(GTK_WIDGET(self));
 }

@@ -9,6 +9,7 @@ typedef struct {
 	gsize alloc_nodes;
 
 	gboolean in_gesture;
+	GSimpleAction* delete_selection;
 } MdNotebookBookToolSelectPrivate;
 
 G_DEFINE_TYPE_WITH_PRIVATE(MdNotebookBookToolSelect, mdnotebook_booktool_select, MDNOTEBOOK_TYPE_BOOKTOOL)
@@ -87,6 +88,7 @@ static void mdnotebook_booktool_select_object_dispose(GObject* object) {
 	MdNotebookBookToolSelectPrivate* priv = mdnotebook_booktool_select_get_instance_private(MDNOTEBOOK_BOOKTOOL_SELECT(object));
 
 	g_free(g_steal_pointer(&priv->nodes));
+	g_clear_object(&priv->delete_selection);
 
 	G_OBJECT_CLASS(mdnotebook_booktool_select_parent_class)->dispose(object);
 }
@@ -95,13 +97,47 @@ static const gchar* mdnotebook_booktool_select_booktool_icon_name(MdNotebookBook
 	return "edit-select-all-symbolic";
 }
 
-static void mdnotebook_booktool_select_booktool_activated(MdNotebookBookTool*, MdNotebookView* view) {
-	mdnotebook_view_set_stylus_gesture_state(view, FALSE);
-	mdnotebook_view_set_cursor_from_name(view, "crosshair");
+static void mdnotebook_booktool_select_delete_selection_cb(GSimpleAction*, GVariant*, MdNotebookView* view) {
+	GtkTextBuffer* buf = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
+
+	GtkTextIter i,j;
+	gtk_text_buffer_get_start_iter(buf, &i);
+	gtk_text_buffer_get_end_iter(buf, &j);
+
+	do {
+		GtkTextChildAnchor* anch = gtk_text_iter_get_child_anchor(&i);
+		if (anch) {
+			guint len;
+			GtkWidget** w = gtk_text_child_anchor_get_widgets(anch, &len);
+			if (len) {
+				if (MDNOTEBOOK_IS_BOUNDDRAWING(w[0]))
+					mdnotebook_bounddrawing_delete_selected(MDNOTEBOOK_BOUNDDRAWING(w[0]));
+			}
+		}
+
+		if (gtk_text_iter_compare(&i, &j) == 0) break;
+	} while (gtk_text_iter_forward_char(&i));
 }
-static void mdnotebook_booktool_select_booktool_deactivated(MdNotebookBookTool*, MdNotebookView* view) {
-	mdnotebook_view_set_stylus_gesture_state(view, TRUE);
+static void mdnotebook_booktool_select_booktool_registered(MdNotebookBookTool* tool, MdNotebookView* view) {
+	MdNotebookBookToolSelectPrivate* priv = mdnotebook_booktool_select_get_instance_private(MDNOTEBOOK_BOOKTOOL_SELECT(tool));
+
+	priv->delete_selection = g_simple_action_new("delete-selection", NULL);
+	g_simple_action_set_enabled(priv->delete_selection, FALSE);
+	g_signal_connect(priv->delete_selection, "activate", G_CALLBACK(mdnotebook_booktool_select_delete_selection_cb), view);
+	mdnotebook_view_insert_action(view, G_ACTION(priv->delete_selection));
+}
+
+static void mdnotebook_booktool_select_booktool_activated(MdNotebookBookTool* tool, MdNotebookView* view) {
+	MdNotebookBookToolSelectPrivate* priv = mdnotebook_booktool_select_get_instance_private(MDNOTEBOOK_BOOKTOOL_SELECT(tool));
+
+	mdnotebook_view_set_cursor_from_name(view, "crosshair");
+	g_simple_action_set_enabled(priv->delete_selection, TRUE);
+}
+static void mdnotebook_booktool_select_booktool_deactivated(MdNotebookBookTool* tool, MdNotebookView* view) {
+	MdNotebookBookToolSelectPrivate* priv = mdnotebook_booktool_select_get_instance_private(MDNOTEBOOK_BOOKTOOL_SELECT(tool));
+
 	mdnotebook_view_set_cursor(view, NULL);
+	g_simple_action_set_enabled(priv->delete_selection, FALSE);
 }
 
 static gboolean mdnotebook_booktool_select_booktool_gesture_start(MdNotebookBookTool* tool, gdouble x, gdouble y, _ gdouble pressure) {
@@ -176,6 +212,7 @@ static void mdnotebook_booktool_select_class_init(MdNotebookBookToolSelectClass*
 	object_class->dispose = mdnotebook_booktool_select_object_dispose;
 
 	booktool_class->icon_name = mdnotebook_booktool_select_booktool_icon_name;
+	booktool_class->registered = mdnotebook_booktool_select_booktool_registered;
 	booktool_class->activated = mdnotebook_booktool_select_booktool_activated;
 	booktool_class->deactivated = mdnotebook_booktool_select_booktool_deactivated;
 	booktool_class->gesture_start = mdnotebook_booktool_select_booktool_gesture_start;
